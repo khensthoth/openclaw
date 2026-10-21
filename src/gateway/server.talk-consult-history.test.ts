@@ -748,11 +748,9 @@ it.each(["before-final", "after-final"] as const)(
         extractText(message)?.includes(args.question),
       );
       expect(generated).toHaveLength(1);
-      expect(generated[0]).toMatchObject({
-        role: "user",
-        display: false,
-        excludeFromContext: true,
-      });
+      expect(generated[0]).toMatchObject({ role: "user", display: false });
+      // The model received this prompt, so replay keeps it to preserve the cached prefix.
+      expect(generated[0]).not.toHaveProperty("excludeFromContext");
       expect(
         storedMessages.filter((message) => message.role === "assistant").map(extractText),
       ).toEqual([directAnswer]);
@@ -766,7 +764,10 @@ it.each(["before-final", "after-final"] as const)(
         expectNoGeneratedInput(messages, `closed direct call ${view}`);
       }
       const modelContext = SessionManager.openModelContext(scope()).buildSessionContext().messages;
-      expectNoGeneratedInput(modelContext, "closed direct call model context");
+      expect(
+        modelContext.filter((message) => extractText(message)?.includes(args.question)),
+        "closed direct call model context replays the submitted prompt once",
+      ).toHaveLength(1);
       expect(modelContext.map(extractText)).toContain(directAnswer);
     } finally {
       releaseModel.resolve();

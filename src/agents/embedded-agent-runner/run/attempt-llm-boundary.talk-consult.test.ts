@@ -5,6 +5,7 @@ import {
 } from "../../../../packages/agent-core/src/harness/messages.js";
 import { buildSessionContext } from "../../../../packages/agent-core/src/harness/session/session.js";
 import type { SessionTreeEntry } from "../../../../packages/agent-core/src/harness/types.js";
+import type { AssistantMessage } from "../../../llm/types.js";
 import { buildRunUserTurnIdempotencyKey } from "../../../sessions/user-turn-transcript.metadata.js";
 import { withEnvAsync } from "../../../test-utils/env.js";
 import { OPENCLAW_RUNTIME_CONTEXT_CUSTOM_TYPE } from "../../internal-runtime-context.js";
@@ -45,19 +46,19 @@ function createTalkSession() {
   const speech = (role: "user" | "assistant", text: string) =>
     append({
       type: "message",
-      message:
-        role === "user"
-          ? { role, content: [{ type: "text", text }], timestamp: clock * 1_000, provenance: voice }
-          : ({
-              role,
+      // Speech rows carry provenance, which the shared message types do not declare.
+      message: (role === "user"
+        ? { role, content: [{ type: "text", text }], timestamp: clock * 1_000, provenance: voice }
+        : {
+            ...makeAgentAssistantMessage({
               content: [{ type: "text", text }],
               api: "realtime",
               provider: "openai",
               model: "realtime-voice",
-              stopReason: "stop",
               timestamp: clock * 1_000,
-              provenance: voice,
-            } as AgentMessage),
+            }),
+            provenance: voice,
+          }) as unknown as AgentMessage,
     });
   const startConsult = (runId: string, prompt: string, excludeFromContext = false) => {
     const live = buildSessionContext(entries).messages;
@@ -97,7 +98,7 @@ function createTalkSession() {
         fragments: [{ kind: "runtime-instruction", text: "Temporal Context" }],
       },
     });
-    const answer = (content: AgentMessage["content"], stopReason: "toolUse" | "stop") =>
+    const answer = (content: AssistantMessage["content"], stopReason: "toolUse" | "stop") =>
       record({
         type: "message",
         message: makeAgentAssistantMessage({

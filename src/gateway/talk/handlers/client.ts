@@ -434,9 +434,11 @@ export const talkClientHandlers: GatewayRequestHandlers = {
             transferGatewayOperatorSourceIdentity(request.client, chatSendOptions.client);
           }
           // Speech owns normal history; detached transports leave the accepted answer to Chat.
+          // The model receives the generated prompt, so it stays model context (hidden from
+          // display): dropping it would rewrite provider history on every later consult.
           const chatSendResult = handleTrustedInternalChatSend(chatSendOptions, undefined, {
             toolsAllow: authority.toolsAllow,
-            transcript: { display: false, excludeFromContext: true },
+            transcript: { display: false },
             prepareAssistantTranscriptMessage: (assistantMessage, sourceText) =>
               (relayRegistration?.prepareTranscript ?? prepareTalkAgentConsultTranscript)(
                 assistantMessage,

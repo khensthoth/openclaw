@@ -19,7 +19,7 @@ const voice = { kind: "realtime_voice", sourceChannel: "talk" } as const;
 let scope = 0;
 
 /** Stored rows in append order, plus the in-memory view of the run that is open. */
-function createTalkSession() {
+function createTalkSession(speechProvider: string) {
   const entries: SessionTreeEntry[] = [];
   let clock = 0;
   const append = (
@@ -53,7 +53,7 @@ function createTalkSession() {
             ...makeAgentAssistantMessage({
               content: [{ type: "text", text }],
               api: "realtime",
-              provider: "openai",
+              provider: speechProvider,
               model: "realtime-voice",
               timestamp: clock * 1_000,
             }),
@@ -143,14 +143,28 @@ function createRequests(sessionId: string) {
   };
 }
 
-async function runTwoConsults() {
+/** Both Talk hand-off routes: the realtime consult runner and the browser talk.client.toolCall. */
+const handoffs = [
+  {
+    route: "consult runner",
+    speechProvider: "openai",
+    runIds: ["talk-realtime-consult-a", "talk-realtime-consult-b"],
+  },
+  {
+    route: "client tool call",
+    speechProvider: "google",
+    runIds: [`talk-${"a".repeat(64)}`, `talk-${"b".repeat(64)}`],
+  },
+] as const;
+
+async function runTwoConsults({ speechProvider, runIds }: (typeof handoffs)[number]) {
   scope += 1;
-  const session = createTalkSession();
+  const session = createTalkSession(speechProvider);
   const request = createRequests(`talk-consult:${scope}`);
   session.speech("user", "Can you check my list?");
   session.speech("assistant", "Sure, one moment.");
 
-  const first = session.startConsult("talk-realtime-consult-a", "User request:\nCheck my list");
+  const first = session.startConsult(runIds[0], "User request:\nCheck my list");
   await request(first.live);
   // Speech finalizes while the consult works and lands inside its stored turn.
   session.speech("user", "Can you check my list, the follow-ups one");
@@ -162,31 +176,31 @@ async function runTwoConsults() {
   session.speech("assistant", "You have three items.");
   session.speech("user", "Add one for Friday");
 
-  const second = session.startConsult(
-    "talk-realtime-consult-b",
-    "User request:\nAdd one for Friday",
-  );
+  const second = session.startConsult(runIds[1], "User request:\nAdd one for Friday");
   return { lastOfFirst, firstOfSecond: await request(second.live) };
 }
 
 describe("Talk consult prompt cache history", () => {
-  it("replays the previous consult byte-identically on the next consult", async () => {
-    await withEnvAsync({ OPENCLAW_PROMPT_CACHE_ASSERT: "1" }, async () => {
-      const { lastOfFirst, firstOfSecond } = await runTwoConsults();
-      expect(firstOfSecond.observation).toMatchObject({ prefixUnchanged: true, changes: null });
-      expect(firstOfSecond.messages.slice(0, lastOfFirst.messages.length)).toEqual(
-        lastOfFirst.messages,
-      );
-      expect(JSON.stringify(firstOfSecond.messages)).toContain("Check my list");
-      // Speech outside the consult turn stays model history.
-      expect(JSON.stringify(firstOfSecond.messages)).toContain("Add one for Friday");
-      expect(JSON.stringify(firstOfSecond.messages)).not.toContain("the follow-ups one");
-    });
-  });
+  it.each(handoffs)(
+    "replays the previous $route hand-off byte-identically on the next one",
+    async (handoff) => {
+      await withEnvAsync({ OPENCLAW_PROMPT_CACHE_ASSERT: "1" }, async () => {
+        const { lastOfFirst, firstOfSecond } = await runTwoConsults(handoff);
+        expect(firstOfSecond.observation).toMatchObject({ prefixUnchanged: true, changes: null });
+        expect(firstOfSecond.messages.slice(0, lastOfFirst.messages.length)).toEqual(
+          lastOfFirst.messages,
+        );
+        expect(JSON.stringify(firstOfSecond.messages)).toContain("Check my list");
+        // Speech outside the consult turn stays model history.
+        expect(JSON.stringify(firstOfSecond.messages)).toContain("Add one for Friday");
+        expect(JSON.stringify(firstOfSecond.messages)).not.toContain("the follow-ups one");
+      });
+    },
+  );
 
   it("detects the rewrite when a consult prompt leaves later context", async () => {
     scope += 1;
-    const session = createTalkSession();
+    const session = createTalkSession("openai");
     const request = createRequests(`talk-consult-excluded:${scope}`);
     const first = session.startConsult("talk-realtime-consult-a", "User request:\nCheck", true);
     first.answer([{ type: "toolCall", id: "call-a", name: "exec", arguments: {} }], "toolUse");

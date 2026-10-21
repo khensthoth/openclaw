@@ -525,7 +525,7 @@ describe("Browser Talk literal consult commands", () => {
   });
 });
 
-it("keeps read-only Talk operator consult scaffolding out of chat and later context but in the raw archive", async () => {
+it("keeps read-only Talk operator consult scaffolding out of chat but replays it as model context", async () => {
   client.connect.scopes = ["operator.read", "operator.talk"];
   const completeModel = expectDefined(
     runEmbeddedAgent.getMockImplementation(),
@@ -634,9 +634,10 @@ it("keeps read-only Talk operator consult scaffolding out of chat and later cont
   expect.soft(generated[0]).toMatchObject({
     role: "user",
     display: false,
-    excludeFromContext: true,
     provenance: { kind: "internal_system" },
   });
+  // The model received this prompt, so replay keeps it to preserve the cached prefix.
+  expect.soft(generated[0]).not.toHaveProperty("excludeFromContext");
   const metadata = asOptionalRecord(generated[0]?.["__openclaw"]);
   expect.soft(metadata?.senderIdentity).toBeUndefined();
   expect.soft(metadata?.senderIsOwner).not.toBe(true);
@@ -649,7 +650,10 @@ it("keeps read-only Talk operator consult scaffolding out of chat and later cont
   expectVisibleSpeechOnly(await historyMessages(), "reopened chat.history", true);
   for (const manager of [SessionManager.open(scope()), SessionManager.openModelContext(scope())]) {
     const messages = manager.buildSessionContext().messages;
-    expectNoGeneratedInput(messages, "reopened model context");
+    expect(
+      messages.filter((message) => extractText(message)?.includes(args.question)),
+      "reopened model context replays the submitted prompt once",
+    ).toHaveLength(1);
     expect(messages.map(extractText)).toEqual(
       expect.arrayContaining([spoken, answer, consultCommentary, consultToolResult, consultAnswer]),
     );

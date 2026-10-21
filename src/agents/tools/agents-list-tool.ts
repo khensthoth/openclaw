@@ -22,6 +22,7 @@ const AgentsListOutputSchema = Type.Object(
         {
           id: Type.String(),
           name: Type.Optional(Type.String()),
+          description: Type.Optional(Type.String()),
           configured: Type.Boolean(),
           model: Type.Optional(Type.String()),
           agentRuntime: Type.Optional(
@@ -74,12 +75,17 @@ export function createAgentsListTool(opts?: {
       const configuredAgents = listAgentEntries(cfg);
       const configuredIds = listAgentIds(cfg);
       const configuredNameMap = new Map<string, string>();
+      const configuredDescriptionMap = new Map<string, string>();
       for (const entry of configuredAgents) {
+        const id = normalizeAgentId(entry.id);
         const name = entry?.name?.trim() ?? "";
-        if (!name) {
-          continue;
+        if (name) {
+          configuredNameMap.set(id, name);
         }
-        configuredNameMap.set(normalizeAgentId(entry.id), name);
+        const description = entry?.description?.trim() ?? "";
+        if (description) {
+          configuredDescriptionMap.set(id, description);
+        }
       }
 
       const allowed = resolveSubagentAllowedTargetIds({
@@ -106,6 +112,7 @@ export function createAgentsListTool(opts?: {
         return {
           id,
           name: configuredNameMap.get(id),
+          description: configuredDescriptionMap.get(id),
           configured: configuredIds.includes(id),
           model,
           agentRuntime,

@@ -186,6 +186,11 @@ it.each([false, true])(
           : { allowAgents: [] },
       );
       expect(entry?.workspace).toBe(path.join(workspaceRoot, id));
+      expect(entry?.description).toEqual(
+        id === coordinatorId
+          ? "Coordinates the others and is your single point of contact."
+          : expect.stringMatching(/\S/),
+      );
       expect(entry).not.toHaveProperty("default");
     }
   },

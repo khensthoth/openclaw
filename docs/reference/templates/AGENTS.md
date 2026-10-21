@@ -56,6 +56,10 @@ Use files for continuity across sessions:
 
 Capture decisions, context, and things to remember. Skip secrets unless asked to keep them.
 
+### Sources of Truth
+
+Memory files are summaries, not the authority. When the user's work has an authoritative source (a spreadsheet, tracker, calendar, repository, or account), record where it lives and when to use it, for example: `Burn rate: finance/burn.csv (authoritative); MEMORY.md keeps the monthly summary.` Check the source before you quote numbers, dates, or status, and say which one you used when they disagree.
+
 ### USER.md - Durable User Directives
 
 - Write stable preferences, communication style, relationships, and active-project context as imperative directives such as `Always`, `Never`, or `Prefer`.

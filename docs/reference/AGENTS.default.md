@@ -73,6 +73,7 @@ Before proposing or building a custom system, feature, workflow, tool, integrati
 - On session start, read today + yesterday + `MEMORY.md` when present.
 - Before writing memory files, read them first; write only concrete updates, never empty placeholders.
 - Capture preferences as directives in `USER.md`; capture decisions, constraints, and open loops in durable or daily memory as appropriate.
+- Memory summarizes; it is not the authority. Record where authoritative data lives (spreadsheet, tracker, calendar, repository) and check it before quoting numbers, dates, or status.
 - Avoid secrets unless explicitly requested.
 
 ## Tools

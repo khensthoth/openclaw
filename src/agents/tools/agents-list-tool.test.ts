@@ -30,8 +30,9 @@ function expectedAgent(
   agentRuntime: { id: string; source: string },
   id = "main",
   name?: string,
+  description?: string,
 ) {
-  return { id, name, configured: true, model, agentRuntime };
+  return { id, name, description, configured: true, model, agentRuntime };
 }
 
 describe("agents_list tool", () => {
@@ -40,7 +41,7 @@ describe("agents_list tool", () => {
     loadConfigMock.mockReset();
   });
 
-  it("returns model and agent runtime metadata for allowed agents", async () => {
+  it("returns description, model, and agent runtime metadata for allowed agents", async () => {
     loadConfigMock.mockReturnValue({
       agents: {
         defaults: {
@@ -51,6 +52,7 @@ describe("agents_list tool", () => {
           main: {},
           codex: {
             name: "Codex",
+            description: "  Implements and reviews code changes.  ",
             model: "openai/gpt-5.5",
             models: {
               "openai/gpt-5.5": { agentRuntime: { id: "codex" } },
@@ -66,10 +68,18 @@ describe("agents_list tool", () => {
       required: ["requester", "allowAny", "agents"],
     });
     expect(compactToolOutputHint(tool.outputSchema)).toBe(
-      '{ agents: Array<{ configured: boolean; id: string; agentRuntime?: { id: string; source: "env" | "agent" | "defaults" | "model" | "provider" | "implicit" | "session" | "session-key" }; model?: string; name?: string }>; allowAny: boolean; requester: string }',
+      '{ agents: Array<{ configured: boolean; id: string; agentRuntime?: { id: string; source: "env" | "agent" | "defaults" | "model" | "provider" | "implicit" | "session" | "session-key" }; description?: string; model?: string; name?: string }>; allowAny: boolean; requester: string }',
     );
     await expectAgents(
-      [expectedAgent("openai/gpt-5.5", { id: "codex", source: "model" }, "codex", "Codex")],
+      [
+        expectedAgent(
+          "openai/gpt-5.5",
+          { id: "codex", source: "model" },
+          "codex",
+          "Codex",
+          "Implements and reviews code changes.",
+        ),
+      ],
       tool,
     );
   });

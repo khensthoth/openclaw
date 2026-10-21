@@ -524,6 +524,10 @@ export async function createAgent(params: CreateAgentParams): Promise<CreateAgen
               ...list[index],
               ...(template
                 ? {
+                    // agents_list publishes this so coordinators can match specialists.
+                    ...(template.manifest.agent.description
+                      ? { description: template.manifest.agent.description }
+                      : {}),
                     subagents:
                       params.role === "coordinator"
                         ? {

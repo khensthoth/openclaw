@@ -72,6 +72,7 @@ for provider examples and precedence.
 ```
 
 - The `agents.entries` object key is the stable agent id.
+- `description`: optional one-line summary of what the agent is for. `agents_list` returns it so coordinators can choose a specialist. Bundled roles and added Claws set it from their manifest.
 - `cwd`: optional working directory for reply runs, separate from `workspace`. Overrides `agents.defaults.cwd`; see [Working directory](/gateway/config-agents/workspace-and-bootstrap#agents.defaults.cwd) for precedence and sandbox restrictions.
 - `default` is retired. Exactly one configured agent resolves implicitly; multi-agent operations require a binding, surface `agentId` target, scoped session/store owner, or explicit `--agent`/request field.
 - `model`: string form sets a strict per-agent primary with no model fallback; object form `{ primary }` is also strict unless you add `fallbacks`. Use `{ primary, fallbacks: [...] }` to opt that agent into fallback, or `{ primary, fallbacks: [] }` to make strict behavior explicit. Cron jobs that only override `primary` still inherit default fallbacks unless you set `fallbacks: []`.

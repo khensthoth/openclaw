@@ -110,6 +110,7 @@ export function createTalkClientAgentRuntime(params: {
               // already received it, so later consults must replay it unchanged: dropping it
               // rewrites provider history and discards the cached prefix on every consult.
               userTurnTranscriptRecorder: createUserTurnTranscriptRecorder({
+                sessionLifecyclePatch: { lastInteractionAt: Date.now() },
                 input: {
                   text: runParams.prompt,
                   display: false,

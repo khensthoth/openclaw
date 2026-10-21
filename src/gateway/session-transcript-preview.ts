@@ -1,3 +1,4 @@
+import { omitHiddenGeneratedRunInputs } from "../agents/embedded-agent-runner/run/talk-voice-history.js";
 import { SessionManager } from "../agents/sessions/session-manager.js";
 import type { SessionTranscriptReadScope } from "../config/sessions/session-accessor.js";
 import {
@@ -109,7 +110,9 @@ function readSessionModelPreviewItems(
     });
     return {
       items: buildSessionPreviewItems(
-        manager.buildSessionContext().messages,
+        // Generated run prompts stay model history for cache stability; voice background
+        // quotes what people said instead.
+        omitHiddenGeneratedRunInputs(manager.buildSessionContext().messages),
         maxItems,
         maxChars,
         "model-context",

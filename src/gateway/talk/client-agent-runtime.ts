@@ -106,13 +106,13 @@ export function createTalkClientAgentRuntime(params: {
             return await execution.runEmbeddedAgent({
               ...runParams,
               preparedRunAdmission,
-              // Speech is mirrored separately. Keep generated input in current-turn custody,
-              // but never display it or replay it as a later user request.
+              // Speech is mirrored separately, so never display generated input. The model
+              // already received it, so later consults must replay it unchanged: dropping it
+              // rewrites provider history and discards the cached prefix on every consult.
               userTurnTranscriptRecorder: createUserTurnTranscriptRecorder({
                 input: {
                   text: runParams.prompt,
                   display: false,
-                  excludeFromContext: true,
                   idempotencyKey: buildRunUserTurnIdempotencyKey(runParams.runId),
                 },
                 target: {

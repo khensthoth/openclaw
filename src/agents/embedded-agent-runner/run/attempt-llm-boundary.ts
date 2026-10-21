@@ -47,6 +47,7 @@ import {
   materializeSteeringRuntimeContext,
   type RuntimeContextCustomMessage,
 } from "./runtime-context-prompt.js";
+import { omitTalkVoiceMessagesInsideRuns } from "./talk-voice-history.js";
 
 const runtimeContextDetailsSchema = z.object({
   source: z.literal("openclaw-runtime-context"),
@@ -156,7 +157,9 @@ export function normalizeMessagesForLlmBoundary(
 ): AgentMessage[] {
   const normalized = stripUnsafeBlockedRunMetadata(
     stripToolResultDetails(
-      normalizeAssistantReplayContent(materializeSteeringRuntimeContext(messages)),
+      normalizeAssistantReplayContent(
+        materializeSteeringRuntimeContext(omitTalkVoiceMessagesInsideRuns(messages)),
+      ),
     ),
   );
   const userTranscriptMessages = resolveUserTranscriptMessages(

@@ -1,0 +1,201 @@
+import { describe, expect, it } from "vitest";
+import {
+  convertToLlm,
+  createCustomMessage,
+} from "../../../../packages/agent-core/src/harness/messages.js";
+import { buildSessionContext } from "../../../../packages/agent-core/src/harness/session/session.js";
+import type { SessionTreeEntry } from "../../../../packages/agent-core/src/harness/types.js";
+import { buildRunUserTurnIdempotencyKey } from "../../../sessions/user-turn-transcript.metadata.js";
+import { withEnvAsync } from "../../../test-utils/env.js";
+import { OPENCLAW_RUNTIME_CONTEXT_CUSTOM_TYPE } from "../../internal-runtime-context.js";
+import type { AgentMessage } from "../../runtime/index.js";
+import { makeAgentAssistantMessage } from "../../test-helpers/agent-message-fixtures.js";
+import { createPromptCacheRequestObserver } from "../prompt-cache-request-observer.js";
+import { normalizeMessagesForLlmBoundary } from "./attempt-llm-boundary.js";
+
+const model = { provider: "anthropic", id: "test-model", api: "anthropic-messages" } as const;
+const voice = { kind: "realtime_voice", sourceChannel: "talk" } as const;
+let scope = 0;
+
+/** Stored rows in append order, plus the in-memory view of the run that is open. */
+function createTalkSession() {
+  const entries: SessionTreeEntry[] = [];
+  let clock = 0;
+  const append = (
+    entry:
+      | { type: "message"; message: AgentMessage }
+      | {
+          type: "custom_message";
+          customType: string;
+          content: string;
+          display: boolean;
+          details: unknown;
+        },
+  ) => {
+    clock += 1;
+    entries.push({
+      ...entry,
+      id: `entry-${clock}`,
+      parentId: entries.at(-1)?.id ?? null,
+      timestamp: new Date(clock * 1_000).toISOString(),
+    } as SessionTreeEntry);
+    return entries.at(-1)!;
+  };
+  /** Rows the browser Talk client mirrors while a consult runs; the run never sees them. */
+  const speech = (role: "user" | "assistant", text: string) =>
+    append({
+      type: "message",
+      message:
+        role === "user"
+          ? { role, content: [{ type: "text", text }], timestamp: clock * 1_000, provenance: voice }
+          : ({
+              role,
+              content: [{ type: "text", text }],
+              api: "realtime",
+              provider: "openai",
+              model: "realtime-voice",
+              stopReason: "stop",
+              timestamp: clock * 1_000,
+              provenance: voice,
+            } as AgentMessage),
+    });
+  const startConsult = (runId: string, prompt: string, excludeFromContext = false) => {
+    const live = buildSessionContext(entries).messages;
+    const record = (entry: Parameters<typeof append>[0]) => {
+      const stored = append(entry);
+      live.push(
+        stored.type === "custom_message"
+          ? createCustomMessage(
+              stored.customType,
+              stored.content,
+              stored.display,
+              stored.details,
+              stored.timestamp,
+            )
+          : (stored as { message: AgentMessage }).message,
+      );
+    };
+    record({
+      type: "message",
+      message: {
+        role: "user",
+        content: [{ type: "text", text: prompt }],
+        timestamp: clock * 1_000,
+        display: false,
+        ...(excludeFromContext ? { excludeFromContext: true } : {}),
+        idempotencyKey: buildRunUserTurnIdempotencyKey(runId),
+      } as AgentMessage,
+    });
+    record({
+      type: "custom_message",
+      customType: OPENCLAW_RUNTIME_CONTEXT_CUSTOM_TYPE,
+      content: "Temporal Context",
+      display: false,
+      details: {
+        source: "openclaw-runtime-context",
+        runtimeContextCarrier: true,
+        fragments: [{ kind: "runtime-instruction", text: "Temporal Context" }],
+      },
+    });
+    const answer = (content: AgentMessage["content"], stopReason: "toolUse" | "stop") =>
+      record({
+        type: "message",
+        message: makeAgentAssistantMessage({
+          api: model.api,
+          provider: model.provider,
+          content: content as never,
+          stopReason,
+          timestamp: clock * 1_000,
+          __openclaw: { runId },
+        } as never),
+      });
+    const toolResult = (toolCallId: string, text: string) =>
+      record({
+        type: "message",
+        message: {
+          role: "toolResult",
+          toolCallId,
+          toolName: "exec",
+          content: [{ type: "text", text }],
+          isError: false,
+          timestamp: clock * 1_000,
+          __openclaw: { runId },
+        } as AgentMessage,
+      });
+    return { live, answer, toolResult };
+  };
+  return { speech, startConsult };
+}
+
+function createRequests(sessionId: string) {
+  const observer = createPromptCacheRequestObserver(
+    { sessionId, streamStrategy: "test" },
+    () => {},
+  );
+  return async (live: AgentMessage[]) => {
+    const messages = convertToLlm(
+      normalizeMessagesForLlmBoundary(live, { appendOnlyRuntimeContext: true }),
+    );
+    const observation = await observer.onModelRequest(model, { messages });
+    observer.onModelUsage({ cacheRead: 100_000 });
+    return { messages, observation };
+  };
+}
+
+async function runTwoConsults() {
+  scope += 1;
+  const session = createTalkSession();
+  const request = createRequests(`talk-consult:${scope}`);
+  session.speech("user", "Can you check my list?");
+  session.speech("assistant", "Sure, one moment.");
+
+  const first = session.startConsult("talk-realtime-consult-a", "User request:\nCheck my list");
+  await request(first.live);
+  // Speech finalizes while the consult works and lands inside its stored turn.
+  session.speech("user", "Can you check my list, the follow-ups one");
+  first.answer([{ type: "toolCall", id: "call-a", name: "exec", arguments: {} }], "toolUse");
+  first.toolResult("call-a", "3 items");
+  const lastOfFirst = await request(first.live);
+  session.speech("assistant", "Let me look that up.");
+  first.answer([{ type: "text", text: "You have three items." }], "stop");
+  session.speech("assistant", "You have three items.");
+  session.speech("user", "Add one for Friday");
+
+  const second = session.startConsult(
+    "talk-realtime-consult-b",
+    "User request:\nAdd one for Friday",
+  );
+  return { lastOfFirst, firstOfSecond: await request(second.live) };
+}
+
+describe("Talk consult prompt cache history", () => {
+  it("replays the previous consult byte-identically on the next consult", async () => {
+    await withEnvAsync({ OPENCLAW_PROMPT_CACHE_ASSERT: "1" }, async () => {
+      const { lastOfFirst, firstOfSecond } = await runTwoConsults();
+      expect(firstOfSecond.observation).toMatchObject({ prefixUnchanged: true, changes: null });
+      expect(firstOfSecond.messages.slice(0, lastOfFirst.messages.length)).toEqual(
+        lastOfFirst.messages,
+      );
+      expect(JSON.stringify(firstOfSecond.messages)).toContain("Check my list");
+      // Speech outside the consult turn stays model history.
+      expect(JSON.stringify(firstOfSecond.messages)).toContain("Add one for Friday");
+      expect(JSON.stringify(firstOfSecond.messages)).not.toContain("the follow-ups one");
+    });
+  });
+
+  it("detects the rewrite when a consult prompt leaves later context", async () => {
+    scope += 1;
+    const session = createTalkSession();
+    const request = createRequests(`talk-consult-excluded:${scope}`);
+    const first = session.startConsult("talk-realtime-consult-a", "User request:\nCheck", true);
+    first.answer([{ type: "toolCall", id: "call-a", name: "exec", arguments: {} }], "toolUse");
+    first.toolResult("call-a", "3 items");
+    await request(first.live);
+    first.answer([{ type: "text", text: "Three." }], "stop");
+    const second = session.startConsult("talk-realtime-consult-b", "User request:\nNext");
+    const { observation } = await request(second.live);
+    expect(observation?.changes).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "historyRewrite" })]),
+    );
+  });
+});

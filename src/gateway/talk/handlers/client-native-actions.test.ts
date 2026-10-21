@@ -273,11 +273,9 @@ describe("native Talk action ownership through public plugin registration", () =
             : [],
         );
         expect(generated).toHaveLength(1);
-        expect.soft(generated[0]).toMatchObject({
-          role: "user",
-          display: false,
-          excludeFromContext: true,
-        });
+        expect.soft(generated[0]).toMatchObject({ role: "user", display: false });
+        // The model saw this prompt, so later consults replay it to keep the cached prefix.
+        expect.soft(generated[0]).not.toHaveProperty("excludeFromContext");
         expect(extractText(generated[0])).toBe(run.prompt);
         const history = await readHistory("native custody");
         expect.soft(JSON.stringify(projectChatDisplayMessages(history))).not.toContain(delegated);

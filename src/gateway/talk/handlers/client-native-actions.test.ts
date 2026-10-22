@@ -295,7 +295,9 @@ describe("native Talk action ownership through public plugin registration", () =
         const originalSocket = socket;
         const replacement = await connectNativeSession(fixture, true, activeVoiceSessionId);
         expect(replacement.result.voiceSessionId).toBe(result.voiceSessionId);
-        await vi.waitFor(() => expect(originalSocket.readyState).toBe(upstream.NativeSocket.CLOSED));
+        await vi.waitFor(() =>
+          expect(originalSocket.readyState).toBe(upstream.NativeSocket.CLOSED),
+        );
         const pendingSession = await nativeCallSession();
         expect(
           pendingSession.instructions,

@@ -1259,7 +1259,11 @@ function assertSessionMetadataMigrated(stateDir, stage) {
     }
   }
   if (getScenario() === "base") {
-    assertStrict.equal(main.label, "upgrade-mixed-talk", "update lost the mixed Talk session label");
+    assertStrict.equal(
+      main.label,
+      "upgrade-mixed-talk",
+      "update lost the mixed Talk session label",
+    );
     const messages =
       source === "file"
         ? fs
@@ -1286,7 +1290,9 @@ function assertSessionMetadataMigrated(stateDir, stage) {
       LEGACY_MIXED_TALK_MESSAGES,
       "update changed mixed chat/Talk transcript order, speech, or legacy exclusion metadata",
     );
-    console.log(`Mixed chat/Talk transcript retained through ${stage}; legacy exclusion unchanged.`);
+    console.log(
+      `Mixed chat/Talk transcript retained through ${stage}; legacy exclusion unchanged.`,
+    );
   }
   // Migration preserves the legacy prompt. A completed serving turn rebuilds
   // that cache; durable session identity and history must survive both stages.
@@ -1783,7 +1789,10 @@ function assertStatusJson([file]) {
     const history = JSON.parse(result.stdout);
     assertStrict.equal(history.sessionId, LEGACY_SESSION_MAIN_ID);
     const visible = JSON.stringify(history.messages);
-    assert(!visible.includes("UPGRADE_INTERNAL:"), "legacy generated consult input leaked into history");
+    assert(
+      !visible.includes("UPGRADE_INTERNAL:"),
+      "legacy generated consult input leaked into history",
+    );
     const expected = [
       "UPGRADE_CHAT: Check my calendar.",
       "UPGRADE_CHAT_REPLY: I will check.",
@@ -1796,7 +1805,11 @@ function assertStatusJson([file]) {
           : (message.content ?? []).filter((part) => part.type === "text").map((part) => part.text);
       return contents.filter((value) => expected.includes(value));
     });
-    assertStrict.deepEqual(actual, expected, "upgraded visible history lost or reordered chat/Talk speech");
+    assertStrict.deepEqual(
+      actual,
+      expected,
+      "upgraded visible history lost or reordered chat/Talk speech",
+    );
     const artifactRoot = process.env.OPENCLAW_UPGRADE_SURVIVOR_ARTIFACT_ROOT || path.dirname(file);
     writeJson(path.join(artifactRoot, "mixed-talk-upgrade-history.json"), {
       status: "passed",

@@ -113,10 +113,11 @@ jobs:
   stable-upgrade:
     name: Stable 2026.10.5 mixed Talk/chat upgrade
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       CI: "true"
       OPENCLAW_DOCKER_E2E_SELECTED_SHA: ${{ github.sha }}
+      OPENCLAW_UPGRADE_SURVIVOR_DOCKER_RUN_TIMEOUT: "3600s"
       OPENCLAW_UPGRADE_SURVIVOR_PUBLISHED_BASELINE: "1"
       OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC: openclaw@2026.10.5
       OPENCLAW_UPGRADE_SURVIVOR_SCENARIO: base

@@ -1973,7 +1973,9 @@ process.stdout.write(sessionDir + "\\n");
               );
             } else {
               const row = db
-                .prepare("SELECT event_json FROM transcript_events WHERE session_id = ? AND seq = ?")
+                .prepare(
+                  "SELECT event_json FROM transcript_events WHERE session_id = ? AND seq = ?",
+                )
                 .get("upgrade-main-session", 4);
               assert(row && typeof row.event_json === "string");
               const event = JSON.parse(row.event_json);

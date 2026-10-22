@@ -1,0 +1,35 @@
+{
+  "kind": "deterministic-filter-comparison",
+  "oldHelperSource": "original-local-build/patch-talk-cache.mjs",
+  "oldHelperSourceSha256": "7006898d946a66febb2256f6f4e9b3cc488477931033e78a18ef2dd11ded7732",
+  "currentImage": "openclaw-local:2026.10.10-beta.2-talkcache-gemini-v2",
+  "cases": [
+    {
+      "name": "pending consult with no assistant response",
+      "oldPreviewContainsGeneratedInput": true,
+      "v2PreviewContainsGeneratedInput": false
+    },
+    {
+      "name": "distinct speech within consult",
+      "oldDropsSpeech": true,
+      "v2RetainsSpeechAfterConsult": true
+    },
+    {
+      "name": "speech overlapping ordinary chat",
+      "oldDropsSpeech": true,
+      "v2PreservesStorageOrder": true
+    }
+  ],
+  "result": "All three old-helper defects reproduced; all three current installed helper assertions passed.",
+  "limitations": [
+    "In-memory helper check only, using original local build recipe and currently installed compiled helpers.",
+    "Not a provider reconnect payload capture, full producer integration test, exact upstream base checkout run or latest-stable upgrade test.",
+    "No production state mutation, model request or service restart."
+  ],
+  "publicRedaction": {
+    "runtimeIds": "Consistent opaque aliases replace session, voice-connection and run identifiers across this bundle.",
+    "modelIdentity": "Exact model identifiers withheld; tested backing provider is Anthropic Claude.",
+    "privateContent": "Calendar content, raw prompts/tool results, credentials, account identifiers, private paths and non-public endpoints omitted.",
+    "chronology": "Each file records its phase; the README describes the consolidated result and supersedes earlier phase-specific gap lists."
+  }
+}

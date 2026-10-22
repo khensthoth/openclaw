@@ -1,0 +1,144 @@
+{
+  "kind": "redacted-reconnect-attempt",
+  "image": "openclaw-local:2026.10.10-beta.2-talkcache-gemini-v2",
+  "sessionId": "session-2",
+  "userReport": "No answer before disconnection.",
+  "voiceConnections": [
+    {
+      "voiceSessionId": "voice-1",
+      "provider": "google",
+      "status": "closed",
+      "createdAtUtc": "2026-10-22T12:29:14.155Z",
+      "closedAtUtc": "2026-10-22T12:30:11.340Z",
+      "consultRunIds": [
+        "client-4"
+      ],
+      "effectCounts": {
+        "succeeded": 7
+      }
+    },
+    {
+      "voiceSessionId": "voice-2",
+      "provider": "google",
+      "status": "closed",
+      "createdAtUtc": "2026-10-22T12:28:47.587Z",
+      "closedAtUtc": "2026-10-22T12:29:12.637Z",
+      "consultRunIds": [
+        "client-5"
+      ],
+      "effectCounts": {
+        "failed": 1,
+        "cancelled": 1
+      }
+    }
+  ],
+  "transcriptFacts": [
+    {
+      "seq": 92,
+      "storedUtc": "2026-10-22T12:29:00.552Z",
+      "role": "user",
+      "consultProvenance": false
+    },
+    {
+      "seq": 93,
+      "storedUtc": "2026-10-22T12:29:00.587Z",
+      "role": "user",
+      "display": false,
+      "consultProvenance": true
+    },
+    {
+      "seq": 95,
+      "storedUtc": "2026-10-22T12:29:10.026Z",
+      "role": "assistant",
+      "runId": "client-5",
+      "provider": "anthropic",
+      "stopReason": "toolUse",
+      "consultProvenance": false
+    },
+    {
+      "seq": 96,
+      "storedUtc": "2026-10-22T12:29:12.639Z",
+      "role": "toolResult",
+      "runId": "client-5",
+      "consultProvenance": false
+    },
+    {
+      "seq": 97,
+      "storedUtc": "2026-10-22T12:29:27.830Z",
+      "role": "user",
+      "consultProvenance": false
+    },
+    {
+      "seq": 98,
+      "storedUtc": "2026-10-22T12:29:27.780Z",
+      "role": "user",
+      "display": false,
+      "consultProvenance": true
+    },
+    {
+      "seq": 101,
+      "storedUtc": "2026-10-22T12:29:34.280Z",
+      "role": "assistant",
+      "runId": "client-4",
+      "provider": "anthropic",
+      "stopReason": "toolUse",
+      "consultProvenance": false
+    },
+    {
+      "seq": 108,
+      "storedUtc": "2026-10-22T12:29:40.672Z",
+      "role": "toolResult",
+      "runId": "client-4",
+      "consultProvenance": false
+    },
+    {
+      "seq": 110,
+      "storedUtc": "2026-10-22T12:29:46.017Z",
+      "role": "assistant",
+      "runId": "client-4",
+      "provider": "anthropic",
+      "stopReason": "stop",
+      "display": false,
+      "consultProvenance": false
+    },
+    {
+      "seq": 112,
+      "storedUtc": "2026-10-22T12:29:50.961Z",
+      "role": "assistant",
+      "provider": "google",
+      "stopReason": "stop",
+      "consultProvenance": false
+    }
+  ],
+  "runOutcomes": [
+    {
+      "runId": "client-5",
+      "ts": "2026-10-22T12:29:11.546Z",
+      "aborted": true,
+      "externalAbort": true,
+      "timedOut": false,
+      "promptError": true
+    },
+    {
+      "runId": "client-4",
+      "ts": "2026-10-22T12:29:46.078Z",
+      "aborted": false,
+      "externalAbort": false,
+      "timedOut": false,
+      "promptError": false
+    }
+  ],
+  "result": "Inconclusive for reconnect-before-first-model-response: first consult had emitted assistant toolUse before connection close; closing cancelled it; replacement connection dispatched a new consult.",
+  "limitations": [
+    "No provider initialization/background request payload retained in voice-session records.",
+    "No claim that generated prompts were absent from actual reconnect background.",
+    "Not evidence of a new regression: close-to-cancel behavior may be intentional; not investigated or changed.",
+    "No unredacted calendar data, prompts, tool arguments, credentials or non-public endpoints included."
+  ],
+  "publicRedaction": {
+    "runtimeIds": "Consistent opaque aliases replace session, voice-connection and run identifiers across this bundle.",
+    "modelIdentity": "Exact model identifiers withheld; tested backing provider is Anthropic Claude.",
+    "privateContent": "Calendar content, raw prompts/tool results, credentials, account identifiers, private paths and non-public endpoints omitted.",
+    "chronology": "Each file records its phase; the README describes the consolidated result and supersedes earlier phase-specific gap lists."
+  }
+}

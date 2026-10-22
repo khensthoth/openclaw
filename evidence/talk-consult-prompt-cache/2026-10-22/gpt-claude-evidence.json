@@ -1,0 +1,240 @@
+{
+  "kind": "redacted-live-behavior-evidence",
+  "fixCommit": "152671f3987b607026d7a3123a7737e2439c6942",
+  "deployment": "compiled-code port on 2026.10.10-beta.2; not full latest-source build",
+  "image": "openclaw-local:2026.10.10-beta.2-talkcache-gemini-v2",
+  "sessionId": "session-1",
+  "voiceProvider": "openai",
+  "chiefProvider": "anthropic",
+  "chiefModel": "Claude (exact model identifier withheld)",
+  "actualConsultCount": 2,
+  "selectedTranscriptFacts": [
+    {
+      "seq": 8,
+      "storedUtc": "2026-10-22T12:14:30.417Z",
+      "role": "user",
+      "display": false,
+      "provenance": {
+        "kind": "internal_system",
+        "sourceTool": "openclaw_agent_consult"
+      },
+      "testMarkers": []
+    },
+    {
+      "seq": 18,
+      "storedUtc": "2026-10-22T12:14:42.298Z",
+      "role": "user",
+      "provenance": {
+        "kind": "realtime_voice",
+        "sourceChannel": "talk"
+      },
+      "testMarkers": [
+        "blue umbrella",
+        "tomorrow"
+      ]
+    },
+    {
+      "seq": 22,
+      "storedUtc": "2026-10-22T12:14:42.250Z",
+      "role": "user",
+      "display": false,
+      "testMarkers": [
+        "blue umbrella",
+        "tomorrow"
+      ]
+    },
+    {
+      "seq": 35,
+      "storedUtc": "2026-10-22T12:14:55.839Z",
+      "role": "user",
+      "display": false,
+      "testMarkers": [
+        "blue umbrella",
+        "tomorrow"
+      ]
+    },
+    {
+      "seq": 37,
+      "storedUtc": "2026-10-22T12:14:59.616Z",
+      "role": "assistant",
+      "runId": "native-1",
+      "testMarkers": [
+        "blue umbrella",
+        "tomorrow"
+      ]
+    },
+    {
+      "seq": 41,
+      "storedUtc": "2026-10-22T12:15:39.059Z",
+      "role": "assistant",
+      "provenance": {
+        "kind": "realtime_voice",
+        "sourceChannel": "talk"
+      },
+      "testMarkers": [
+        "blue umbrella",
+        "tomorrow"
+      ]
+    },
+    {
+      "seq": 44,
+      "storedUtc": "2026-10-22T12:15:49.154Z",
+      "role": "user",
+      "display": false,
+      "provenance": {
+        "kind": "internal_system",
+        "sourceTool": "openclaw_agent_consult"
+      },
+      "testMarkers": [
+        "blue umbrella",
+        "tomorrow",
+        "next monday"
+      ]
+    },
+    {
+      "seq": 47,
+      "storedUtc": "2026-10-22T12:15:55.159Z",
+      "role": "assistant",
+      "runId": "native-2",
+      "testMarkers": []
+    },
+    {
+      "seq": 56,
+      "storedUtc": "2026-10-22T12:16:04.452Z",
+      "role": "assistant",
+      "runId": "native-2",
+      "testMarkers": [
+        "next monday"
+      ]
+    }
+  ],
+  "modelCalls": [
+    {
+      "seq": 11,
+      "runId": "native-1",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 4,
+      "output": 99,
+      "cacheRead": 9857,
+      "cacheWrite": 20620
+    },
+    {
+      "seq": 16,
+      "runId": "native-1",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 2,
+      "output": 299,
+      "cacheRead": 30477,
+      "cacheWrite": 984
+    },
+    {
+      "seq": 26,
+      "runId": "native-1",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 4,
+      "output": 894,
+      "cacheRead": 31461,
+      "cacheWrite": 7365
+    },
+    {
+      "seq": 37,
+      "runId": "native-1",
+      "stopReason": "stop",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 4,
+      "output": 274,
+      "cacheRead": 38826,
+      "cacheWrite": 1448
+    },
+    {
+      "seq": 47,
+      "runId": "native-2",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 4,
+      "output": 735,
+      "cacheRead": 40274,
+      "cacheWrite": 1550
+    },
+    {
+      "seq": 56,
+      "runId": "native-2",
+      "stopReason": "stop",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 2,
+      "output": 223,
+      "cacheRead": 41824,
+      "cacheWrite": 1148
+    }
+  ],
+  "completionObservations": [
+    {
+      "runId": "native-1",
+      "aborted": false,
+      "timedOut": false,
+      "cacheObservation": {
+        "broke": false,
+        "previousCacheRead": 31461,
+        "cacheRead": 38826
+      }
+    },
+    {
+      "runId": "native-2",
+      "aborted": false,
+      "timedOut": false,
+      "cacheObservation": {
+        "broke": false,
+        "previousCacheRead": 40274,
+        "cacheRead": 41824
+      }
+    }
+  ],
+  "storedSnapshotCoverage": [
+    {
+      "runId": "native-1",
+      "eventType": "prompt.submitted",
+      "messagesCount": 3,
+      "redactionMarkerPresent": true
+    },
+    {
+      "runId": "native-1",
+      "eventType": "model.completed",
+      "snapshotCount": 14,
+      "redactionMarkerPresent": true
+    },
+    {
+      "runId": "native-2",
+      "eventType": "prompt.submitted",
+      "messagesCount": 22,
+      "redactionMarkerPresent": true
+    },
+    {
+      "runId": "native-2",
+      "eventType": "model.completed",
+      "snapshotCount": 27,
+      "redactionMarkerPresent": true
+    }
+  ],
+  "limitations": [
+    "Recall question was answered by voice assistant without a third Chief run.",
+    "Clarification also arrived as steering input inside the first consult; this does not isolate the deferred-speech-only case.",
+    "No exact provider-wire byte-prefix comparison or exact-base failing run claimed.",
+    "Pending reconnect, ordinary mixed-chat overlap, old-data latest-stable upgrade and maintainer approval remain unverified.",
+    "Calendar details, prompts, tool arguments/results, account identifiers, endpoints and credentials omitted."
+  ],
+  "publicRedaction": {
+    "runtimeIds": "Consistent opaque aliases replace session, voice-connection and run identifiers across this bundle.",
+    "modelIdentity": "Exact model identifiers withheld; tested backing provider is Anthropic Claude.",
+    "privateContent": "Calendar content, raw prompts/tool results, credentials, account identifiers, private paths and non-public endpoints omitted.",
+    "chronology": "Each file records its phase; the README describes the consolidated result and supersedes earlier phase-specific gap lists."
+  }
+}

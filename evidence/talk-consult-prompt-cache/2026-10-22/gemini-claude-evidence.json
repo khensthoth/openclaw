@@ -1,0 +1,349 @@
+{
+  "kind": "redacted-live-behavior-evidence",
+  "fixCommit": "152671f3987b607026d7a3123a7737e2439c6942",
+  "deployment": "compiled-code port on 2026.10.10-beta.2; not full latest-source build",
+  "image": "openclaw-local:2026.10.10-beta.2-talkcache-gemini-v2",
+  "sessionId": "session-2",
+  "voiceProvider": "google",
+  "chiefProvider": "anthropic",
+  "chiefModel": "Claude (exact model identifier withheld)",
+  "actualConsultCount": 3,
+  "selectedTranscriptFacts": [
+    {
+      "seq": 9,
+      "storedUtc": "2026-10-22T12:22:30.579Z",
+      "role": "user",
+      "display": false,
+      "provenance": {
+        "kind": "internal_system",
+        "sourceTool": "openclaw_agent_consult"
+      },
+      "testMarkers": []
+    },
+    {
+      "seq": 26,
+      "storedUtc": "2026-10-22T12:22:49.670Z",
+      "role": "user",
+      "provenance": {
+        "kind": "realtime_voice",
+        "sourceChannel": "talk"
+      },
+      "testMarkers": [
+        "next tuesday"
+      ]
+    },
+    {
+      "seq": 31,
+      "storedUtc": "2026-10-22T12:22:56.295Z",
+      "role": "assistant",
+      "display": false,
+      "runId": "client-1",
+      "testMarkers": []
+    },
+    {
+      "seq": 35,
+      "storedUtc": "2026-10-22T12:23:14.169Z",
+      "role": "user",
+      "display": false,
+      "provenance": {
+        "kind": "internal_system",
+        "sourceTool": "openclaw_agent_consult"
+      },
+      "testMarkers": []
+    },
+    {
+      "seq": 40,
+      "storedUtc": "2026-10-22T12:23:22.584Z",
+      "role": "user",
+      "provenance": {
+        "kind": "realtime_voice",
+        "sourceChannel": "talk"
+      },
+      "testMarkers": [
+        "red kite",
+        "next tuesday"
+      ]
+    },
+    {
+      "seq": 65,
+      "storedUtc": "2026-10-22T12:23:43.095Z",
+      "role": "assistant",
+      "display": false,
+      "runId": "client-2",
+      "testMarkers": [
+        "next tuesday"
+      ]
+    },
+    {
+      "seq": 69,
+      "storedUtc": "2026-10-22T12:24:07.511Z",
+      "role": "user",
+      "display": false,
+      "provenance": {
+        "kind": "internal_system",
+        "sourceTool": "openclaw_agent_consult"
+      },
+      "testMarkers": [
+        "next monday"
+      ]
+    },
+    {
+      "seq": 71,
+      "storedUtc": "2026-10-22T12:24:14.695Z",
+      "role": "assistant",
+      "runId": "client-3",
+      "testMarkers": []
+    },
+    {
+      "seq": 88,
+      "storedUtc": "2026-10-22T12:24:40.856Z",
+      "role": "assistant",
+      "display": false,
+      "runId": "client-3",
+      "testMarkers": [
+        "red kite",
+        "next tuesday",
+        "next monday"
+      ]
+    },
+    {
+      "seq": 90,
+      "storedUtc": "2026-10-22T12:24:44.957Z",
+      "role": "assistant",
+      "provenance": {
+        "kind": "realtime_voice",
+        "sourceChannel": "talk"
+      },
+      "testMarkers": [
+        "red kite",
+        "next tuesday",
+        "next monday"
+      ]
+    }
+  ],
+  "modelCalls": [
+    {
+      "seq": 11,
+      "runId": "client-1",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 4,
+      "output": 113,
+      "cacheRead": 9857,
+      "cacheWrite": 20712
+    },
+    {
+      "seq": 15,
+      "runId": "client-1",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 2,
+      "output": 93,
+      "cacheRead": 30569,
+      "cacheWrite": 332
+    },
+    {
+      "seq": 19,
+      "runId": "client-1",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 2,
+      "output": 210,
+      "cacheRead": 30901,
+      "cacheWrite": 233
+    },
+    {
+      "seq": 23,
+      "runId": "client-1",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 2,
+      "output": 293,
+      "cacheRead": 31134,
+      "cacheWrite": 1092
+    },
+    {
+      "seq": 31,
+      "runId": "client-1",
+      "stopReason": "stop",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 2,
+      "output": 241,
+      "cacheRead": 32226,
+      "cacheWrite": 532
+    },
+    {
+      "seq": 37,
+      "runId": "client-2",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 4,
+      "output": 352,
+      "cacheRead": 32758,
+      "cacheWrite": 836
+    },
+    {
+      "seq": 45,
+      "runId": "client-2",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 2,
+      "output": 707,
+      "cacheRead": 33594,
+      "cacheWrite": 3260
+    },
+    {
+      "seq": 60,
+      "runId": "client-2",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 2,
+      "output": 392,
+      "cacheRead": 36854,
+      "cacheWrite": 4306
+    },
+    {
+      "seq": 65,
+      "runId": "client-2",
+      "stopReason": "stop",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 2,
+      "output": 306,
+      "cacheRead": 41160,
+      "cacheWrite": 746
+    },
+    {
+      "seq": 71,
+      "runId": "client-3",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 4,
+      "output": 792,
+      "cacheRead": 41906,
+      "cacheWrite": 943
+    },
+    {
+      "seq": 83,
+      "runId": "client-3",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 2,
+      "output": 521,
+      "cacheRead": 42849,
+      "cacheWrite": 1159
+    },
+    {
+      "seq": 88,
+      "runId": "client-3",
+      "stopReason": "stop",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 2,
+      "output": 473,
+      "cacheRead": 44008,
+      "cacheWrite": 888
+    }
+  ],
+  "firstRequestPerConsult": [
+    {
+      "seq": 11,
+      "runId": "client-1",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 4,
+      "output": 113,
+      "cacheRead": 9857,
+      "cacheWrite": 20712,
+      "cacheReusePercent": 32.240866123703924
+    },
+    {
+      "seq": 37,
+      "runId": "client-2",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 4,
+      "output": 352,
+      "cacheRead": 32758,
+      "cacheWrite": 836,
+      "cacheReusePercent": 97.49985118161796
+    },
+    {
+      "seq": 71,
+      "runId": "client-3",
+      "stopReason": "toolUse",
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "input": 4,
+      "output": 792,
+      "cacheRead": 41906,
+      "cacheWrite": 943,
+      "cacheReusePercent": 97.79011971157212
+    }
+  ],
+  "completionObservations": [
+    {
+      "runId": "client-1",
+      "aborted": false,
+      "timedOut": false,
+      "compactionCount": 0,
+      "cacheObservation": {
+        "broke": false,
+        "previousCacheRead": 31134,
+        "cacheRead": 32226
+      }
+    },
+    {
+      "runId": "client-2",
+      "aborted": false,
+      "timedOut": false,
+      "compactionCount": 0,
+      "cacheObservation": {
+        "broke": false,
+        "previousCacheRead": 36854,
+        "cacheRead": 41160
+      }
+    },
+    {
+      "runId": "client-3",
+      "aborted": false,
+      "timedOut": false,
+      "compactionCount": 0,
+      "cacheObservation": {
+        "broke": false,
+        "previousCacheRead": 42849,
+        "cacheRead": 44008
+      }
+    }
+  ],
+  "findings": [
+    "Distinct voice clarification red kite/next Tuesday stored at seq40 during second consult, before its final answer seq65.",
+    "No additional hidden user steering message appears between seq35 second consult prompt and seq65 second consult answer.",
+    "Third generated consult prompt seq69 contains neither red kite nor next Tuesday; Claude final answer seq88 and Gemini spoken answer seq90 contain both.",
+    "Generated consult inputs are tagged internal_system/openclaw_agent_consult, display=false, not excludeFromContext=true."
+  ],
+  "limitations": [
+    "Phrase detection proves presence, not the precise natural-language claim made in a response; private response text omitted.",
+    "No exact provider-wire byte-prefix comparison or exact-base failing run claimed.",
+    "Pending reconnect, ordinary mixed-chat overlap, pre-upgrade data compatibility, full latest-stable upgrade and maintainer approval remain unverified.",
+    "Calendar details, raw prompts, tool arguments/results, account identifiers, endpoints and credentials omitted."
+  ],
+  "publicRedaction": {
+    "runtimeIds": "Consistent opaque aliases replace session, voice-connection and run identifiers across this bundle.",
+    "modelIdentity": "Exact model identifiers withheld; tested backing provider is Anthropic Claude.",
+    "privateContent": "Calendar content, raw prompts/tool results, credentials, account identifiers, private paths and non-public endpoints omitted.",
+    "chronology": "Each file records its phase; the README describes the consolidated result and supersedes earlier phase-specific gap lists."
+  }
+}

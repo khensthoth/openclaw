@@ -1,0 +1,132 @@
+{
+  "kind": "redacted-mixed-chat-voice-evidence",
+  "image": "openclaw-local:2026.10.10-beta.2-talkcache-gemini-v2",
+  "sourceFix": "152671f3987b607026d7a3123a7737e2439c6942",
+  "sessionId": "session-2",
+  "voiceProvider": "google",
+  "chiefModel": "Claude (exact model identifier withheld)",
+  "selectedTranscriptFacts": [
+    {
+      "seq": 113,
+      "storedUtc": "2026-10-22T12:33:35.266Z",
+      "role": "user",
+      "provenance": {
+        "kind": "external_user"
+      },
+      "containsSilverMango": false,
+      "consultProvenance": false,
+      "idempotencyKeyIsTalk": false
+    },
+    {
+      "seq": 115,
+      "storedUtc": "2026-10-22T12:33:43.297Z",
+      "role": "user",
+      "provenance": {
+        "kind": "realtime_voice",
+        "sourceChannel": "talk"
+      },
+      "containsSilverMango": true,
+      "consultProvenance": false,
+      "idempotencyKeyIsTalk": false
+    },
+    {
+      "seq": 116,
+      "storedUtc": "2026-10-22T12:33:43.987Z",
+      "role": "assistant",
+      "provenance": {
+        "kind": "realtime_voice",
+        "sourceChannel": "talk"
+      },
+      "containsSilverMango": true,
+      "consultProvenance": false,
+      "idempotencyKeyIsTalk": false,
+      "provider": "google",
+      "model": "realtime-voice",
+      "stopReason": "stop"
+    },
+    {
+      "seq": 117,
+      "storedUtc": "2026-10-22T12:33:49.665Z",
+      "role": "assistant",
+      "runId": "chat-1",
+      "containsSilverMango": false,
+      "consultProvenance": false,
+      "idempotencyKeyIsTalk": false,
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "stopReason": "toolUse",
+      "usage": {
+        "input": 4,
+        "output": 770,
+        "cacheRead": 10708,
+        "cacheWrite": 38584
+      }
+    },
+    {
+      "seq": 126,
+      "storedUtc": "2026-10-22T12:34:14.149Z",
+      "role": "assistant",
+      "runId": "chat-1",
+      "containsSilverMango": false,
+      "consultProvenance": false,
+      "idempotencyKeyIsTalk": false,
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "stopReason": "stop",
+      "usage": {
+        "input": 2,
+        "output": 234,
+        "cacheRead": 49292,
+        "cacheWrite": 1258
+      }
+    },
+    {
+      "seq": 128,
+      "storedUtc": "2026-10-22T12:35:43.436Z",
+      "role": "user",
+      "provenance": {
+        "kind": "external_user"
+      },
+      "containsSilverMango": false,
+      "consultProvenance": false,
+      "idempotencyKeyIsTalk": false
+    },
+    {
+      "seq": 130,
+      "storedUtc": "2026-10-22T12:35:55.478Z",
+      "role": "assistant",
+      "runId": "chat-2",
+      "containsSilverMango": true,
+      "consultProvenance": false,
+      "idempotencyKeyIsTalk": false,
+      "provider": "anthropic",
+      "model": "Claude (exact model identifier withheld)",
+      "stopReason": "stop",
+      "usage": {
+        "input": 4,
+        "output": 102,
+        "cacheRead": 49292,
+        "cacheWrite": 2032
+      }
+    }
+  ],
+  "checks": {
+    "typedInputsAreExternalUser": true,
+    "spokenPhraseHasVoiceProvenance": true,
+    "spokenPhraseInsideTextRun": true,
+    "recallPromptDoesNotRepeatPhrase": true,
+    "claudeRecallContainsPhrase": true,
+    "typedInputsNotConsult": true
+  },
+  "result": "PASS: distinct speech during ordinary typed chat survives and is recalled in subsequent typed answer.",
+  "limitations": [
+    "This conversation was created after deployment, so it is not pre-upgrade compatibility evidence.",
+    "Phrase presence and run/timing evidence; no private response text or provider request contents included."
+  ],
+  "publicRedaction": {
+    "runtimeIds": "Consistent opaque aliases replace session, voice-connection and run identifiers across this bundle.",
+    "modelIdentity": "Exact model identifiers withheld; tested backing provider is Anthropic Claude.",
+    "privateContent": "Calendar content, raw prompts/tool results, credentials, account identifiers, private paths and non-public endpoints omitted.",
+    "chronology": "Each file records its phase; the README describes the consolidated result and supersedes earlier phase-specific gap lists."
+  }
+}

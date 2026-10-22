@@ -1,5 +1,6 @@
 import { asOptionalObjectRecord } from "@openclaw/normalization-core/record-coerce";
 import { buildRunUserTurnIdempotencyKey } from "../../../sessions/user-turn-transcript.metadata.js";
+import { REALTIME_VOICE_AGENT_CONSULT_INPUT_PROVENANCE } from "../../../talk/agent-consult-tool.js";
 import type { AgentMessage } from "../../runtime/index.js";
 
 function readMessageRunId(message: AgentMessage): string | undefined {
@@ -15,53 +16,56 @@ function isTalkRealtimeVoiceMessage(message: AgentMessage): boolean {
   return provenance?.kind === "realtime_voice" && provenance.sourceChannel === "talk";
 }
 
-/** Hidden prompts a run generated for itself, such as Talk consult requests. */
-export function omitHiddenGeneratedRunInputs(messages: AgentMessage[]): AgentMessage[] {
-  const runUserKeys = new Set(
-    messages.flatMap((message) => {
-      const runId = readMessageRunId(message);
-      return runId ? [buildRunUserTurnIdempotencyKey(runId)] : [];
-    }),
+/** The hidden prompt a Talk hand-off generated, recognizable before the run responds. */
+function isTalkConsultInput(message: AgentMessage): boolean {
+  if (message.role !== "user" || Reflect.get(message, "display") !== false) {
+    return false;
+  }
+  const provenance = asOptionalObjectRecord(Reflect.get(message, "provenance"));
+  return (
+    provenance?.kind === REALTIME_VOICE_AGENT_CONSULT_INPUT_PROVENANCE.kind &&
+    provenance.sourceTool === REALTIME_VOICE_AGENT_CONSULT_INPUT_PROVENANCE.sourceTool
   );
-  return messages.filter((message) => {
-    const key = message.role === "user" ? Reflect.get(message, "idempotencyKey") : undefined;
-    return !(
-      typeof key === "string" &&
-      runUserKeys.has(key) &&
-      Reflect.get(message, "display") === false
-    );
-  });
+}
+
+/** Generated Talk consult prompts stay model history for cache stability, never quoted speech. */
+export function omitTalkConsultInputs(messages: AgentMessage[]): AgentMessage[] {
+  const kept = messages.filter((message) => !isTalkConsultInput(message));
+  return kept.length === messages.length ? messages : kept;
 }
 
 /**
- * Talk speech rows are appended while a run is open, so that run's requests never contained
- * them. Its keyed prompt and answer already carry the exchange; replaying rows recorded inside
- * the run would rewrite the provider prefix its requests cached.
+ * Talk speech rows are appended while a consult runs, so that run's requests never contained
+ * them. Replaying them in storage order would rewrite the provider prefix those requests
+ * cached; moving them to just after the consult's last row keeps history append-only and
+ * still gives later turns everything that was said. Other runs keep storage order.
  */
-export function omitTalkVoiceMessagesInsideRuns(messages: AgentMessage[]): AgentMessage[] {
+export function deferTalkSpeechInsideConsults(messages: AgentMessage[]): AgentMessage[] {
   if (!messages.some(isTalkRealtimeVoiceMessage)) {
     return messages;
   }
-  const lastIndexByRun = new Map<string, number>();
+  const lastIndexByUserKey = new Map<string, number>();
   messages.forEach((message, index) => {
     const runId = readMessageRunId(message);
     if (runId) {
-      lastIndexByRun.set(runId, index);
+      lastIndexByUserKey.set(buildRunUserTurnIdempotencyKey(runId), index);
     }
   });
-  const runByUserKey = new Map(
-    [...lastIndexByRun.keys()].map((runId) => [buildRunUserTurnIdempotencyKey(runId), runId]),
-  );
+  const deferredUntil = new Map<number, AgentMessage[]>();
+  const ordered: AgentMessage[] = [];
   let openUntil = -1;
-  const kept = messages.filter((message, index) => {
-    const userKey = message.role === "user" ? Reflect.get(message, "idempotencyKey") : undefined;
-    const runId =
-      readMessageRunId(message) ??
-      (typeof userKey === "string" ? runByUserKey.get(userKey) : undefined);
-    if (runId) {
-      openUntil = Math.max(openUntil, lastIndexByRun.get(runId) ?? -1);
+  messages.forEach((message, index) => {
+    const userKey = isTalkConsultInput(message)
+      ? Reflect.get(message, "idempotencyKey")
+      : undefined;
+    if (typeof userKey === "string") {
+      openUntil = Math.max(openUntil, lastIndexByUserKey.get(userKey) ?? -1);
     }
-    return !(index < openUntil && isTalkRealtimeVoiceMessage(message));
+    if (index < openUntil && isTalkRealtimeVoiceMessage(message)) {
+      deferredUntil.set(openUntil, [...(deferredUntil.get(openUntil) ?? []), message]);
+      return;
+    }
+    ordered.push(message, ...(deferredUntil.get(index) ?? []));
   });
-  return kept.length === messages.length ? messages : kept;
+  return deferredUntil.size ? ordered : messages;
 }

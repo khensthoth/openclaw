@@ -7,12 +7,14 @@ import { buildSessionContext } from "../../../../packages/agent-core/src/harness
 import type { SessionTreeEntry } from "../../../../packages/agent-core/src/harness/types.js";
 import type { AssistantMessage } from "../../../llm/types.js";
 import { buildRunUserTurnIdempotencyKey } from "../../../sessions/user-turn-transcript.metadata.js";
+import { REALTIME_VOICE_AGENT_CONSULT_INPUT_PROVENANCE } from "../../../talk/agent-consult-tool.js";
 import { withEnvAsync } from "../../../test-utils/env.js";
 import { OPENCLAW_RUNTIME_CONTEXT_CUSTOM_TYPE } from "../../internal-runtime-context.js";
 import type { AgentMessage } from "../../runtime/index.js";
 import { makeAgentAssistantMessage } from "../../test-helpers/agent-message-fixtures.js";
 import { createPromptCacheRequestObserver } from "../prompt-cache-request-observer.js";
 import { normalizeMessagesForLlmBoundary } from "./attempt-llm-boundary.js";
+import { omitTalkConsultInputs } from "./talk-voice-history.js";
 
 const model = { provider: "anthropic", id: "test-model", api: "anthropic-messages" } as const;
 const voice = { kind: "realtime_voice", sourceChannel: "talk" } as const;
@@ -60,7 +62,11 @@ function createTalkSession(speechProvider: string) {
             provenance: voice,
           }) as unknown as AgentMessage,
     });
-  const startConsult = (runId: string, prompt: string, excludeFromContext = false) => {
+  const startConsult = (
+    runId: string,
+    prompt: string,
+    { excludeFromContext = false, ordinary = false } = {},
+  ) => {
     const live = buildSessionContext(entries).messages;
     const record = (entry: Parameters<typeof append>[0]) => {
       const stored = append(entry);
@@ -82,7 +88,9 @@ function createTalkSession(speechProvider: string) {
         role: "user",
         content: [{ type: "text", text: prompt }],
         timestamp: clock * 1_000,
-        display: false,
+        ...(ordinary
+          ? {}
+          : { display: false, provenance: REALTIME_VOICE_AGENT_CONSULT_INPUT_PROVENANCE }),
         ...(excludeFromContext ? { excludeFromContext: true } : {}),
         idempotencyKey: buildRunUserTurnIdempotencyKey(runId),
       } as AgentMessage,
@@ -125,7 +133,7 @@ function createTalkSession(speechProvider: string) {
       });
     return { live, answer, toolResult };
   };
-  return { speech, startConsult };
+  return { speech, startConsult, stored: () => buildSessionContext(entries).messages };
 }
 
 function createRequests(sessionId: string) {
@@ -190,10 +198,13 @@ describe("Talk consult prompt cache history", () => {
         expect(firstOfSecond.messages.slice(0, lastOfFirst.messages.length)).toEqual(
           lastOfFirst.messages,
         );
-        expect(JSON.stringify(firstOfSecond.messages)).toContain("Check my list");
-        // Speech outside the consult turn stays model history.
-        expect(JSON.stringify(firstOfSecond.messages)).toContain("Add one for Friday");
-        expect(JSON.stringify(firstOfSecond.messages)).not.toContain("the follow-ups one");
+        const replayed = JSON.stringify(firstOfSecond.messages);
+        expect(replayed).toContain("Check my list");
+        expect(replayed).toContain("Add one for Friday");
+        // Speech recorded during the consult follows its answer instead of being dropped.
+        expect(replayed.indexOf("the follow-ups one")).toBeGreaterThan(
+          replayed.indexOf("You have three items."),
+        );
       });
     },
   );
@@ -202,7 +213,9 @@ describe("Talk consult prompt cache history", () => {
     scope += 1;
     const session = createTalkSession("openai");
     const request = createRequests(`talk-consult-excluded:${scope}`);
-    const first = session.startConsult("talk-realtime-consult-a", "User request:\nCheck", true);
+    const first = session.startConsult("talk-realtime-consult-a", "User request:\nCheck", {
+      excludeFromContext: true,
+    });
     first.answer([{ type: "toolCall", id: "call-a", name: "exec", arguments: {} }], "toolUse");
     first.toolResult("call-a", "3 items");
     await request(first.live);
@@ -212,5 +225,42 @@ describe("Talk consult prompt cache history", () => {
     expect(observation?.changes).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "historyRewrite" })]),
     );
+  });
+
+  it("keeps speech in storage order around ordinary runs", () => {
+    const session = createTalkSession("google");
+    const run = session.startConsult("chat-run-a", "What's on today?", { ordinary: true });
+    session.speech("user", "Also check tomorrow");
+    run.answer([{ type: "text", text: "Nothing today." }], "stop");
+    const texts = normalizeMessagesForLlmBoundary(session.stored(), {
+      appendOnlyRuntimeContext: true,
+    }).map((message) => JSON.stringify(message));
+    const speech = texts.findIndex((text) => text.includes("Also check tomorrow"));
+    expect(speech).toBeGreaterThan(-1);
+    expect(speech).toBeLessThan(texts.findIndex((text) => text.includes("Nothing today.")));
+  });
+
+  it("hides a pending consult prompt from voice background before the run responds", () => {
+    const session = createTalkSession("google");
+    session.speech("user", "Check my list");
+    session.startConsult(`talk-${"c".repeat(64)}`, "User request:\nCheck my list");
+    const background = JSON.stringify(omitTalkConsultInputs(session.stored()));
+    expect(background).toContain("Check my list");
+    expect(background).not.toContain("User request:");
+  });
+
+  it("loads consult records saved before retention without changing them", () => {
+    const session = createTalkSession("openai");
+    const legacy = session.startConsult("talk-realtime-consult-old", "User request:\nOld", {
+      excludeFromContext: true,
+    });
+    session.speech("user", "Thanks");
+    legacy.answer([{ type: "text", text: "Done." }], "stop");
+    const texts = JSON.stringify(
+      normalizeMessagesForLlmBoundary(session.stored(), { appendOnlyRuntimeContext: true }),
+    );
+    expect(texts).not.toContain("User request:");
+    expect(texts.indexOf("Thanks")).toBeGreaterThan(-1);
+    expect(texts.indexOf("Thanks")).toBeLessThan(texts.indexOf("Done."));
   });
 });

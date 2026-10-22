@@ -9,6 +9,7 @@ import {
   createUserTurnTranscriptRecorder,
 } from "../../sessions/user-turn-transcript.js";
 import { createLazyRuntimeModule } from "../../shared/lazy-runtime.js";
+import { REALTIME_VOICE_AGENT_CONSULT_INPUT_PROVENANCE } from "../../talk/agent-consult-tool.js";
 import type { GatewayContextResolver } from "../server-methods/types.js";
 import type { TalkClientRunAuthority } from "./client-run-authority.js";
 
@@ -114,6 +115,7 @@ export function createTalkClientAgentRuntime(params: {
                 input: {
                   text: runParams.prompt,
                   display: false,
+                  provenance: REALTIME_VOICE_AGENT_CONSULT_INPUT_PROVENANCE,
                   idempotencyKey: buildRunUserTurnIdempotencyKey(runParams.runId),
                 },
                 target: {

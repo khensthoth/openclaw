@@ -29,6 +29,7 @@ import { readOpenClawAgentDatabaseIdentity } from "../../../state/openclaw-agent
 import { withOpenClawAgentDatabaseRuntime } from "../../../state/openclaw-agent-db.js";
 import { runOpenClawAgentWriteAdmission } from "../../../state/openclaw-agent-write-admission.js";
 import {
+  REALTIME_VOICE_AGENT_CONSULT_INPUT_PROVENANCE,
   REALTIME_VOICE_AGENT_CONSULT_TOOL_NAME,
   parseRealtimeVoiceAgentConsultArgs,
   buildRealtimeVoiceAgentConsultChatMessage,
@@ -399,10 +400,7 @@ export const talkClientHandlers: GatewayRequestHandlers = {
               message,
               idempotencyKey,
               suppressCommandInterpretation: true,
-              systemInputProvenance: {
-                kind: "internal_system",
-                sourceTool: REALTIME_VOICE_AGENT_CONSULT_TOOL_NAME,
-              },
+              systemInputProvenance: REALTIME_VOICE_AGENT_CONSULT_INPUT_PROVENANCE,
               ...(normalizedTalk?.consultThinkingLevel
                 ? { thinking: normalizedTalk.consultThinkingLevel }
                 : {}),

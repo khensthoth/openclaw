@@ -59,6 +59,7 @@ import {
 } from "./session-row-projection-access.js";
 import { createSessionRowProjection } from "./session-row-projection.js";
 import { createTalkClientAgentConsultRunner } from "./talk/client-agent-consult.js";
+import { readTalkRealtimeInitialItems } from "./talk/session-history.js";
 import { prepareTalkSessionTarget } from "./talk/session-target.js";
 import {
   createGatewaySuiteHarness,
@@ -602,6 +603,12 @@ it("keeps read-only Talk operator consult scaffolding out of chat but replays it
   await drainPublications();
   expectVisibleSpeechOnly(liveMessages(), "before model completion", false);
   expectVisibleSpeechOnly(await historyMessages(), "model-held chat.history", false);
+  // Reconnect background must hide the real persisted input before any model response exists.
+  const pendingTarget = await prepareTalkSessionTarget(getRuntimeConfig(), sessionKey);
+  expect(
+    await readTalkRealtimeInitialItems(pendingTarget, pendingTarget.assertCurrent),
+    "voice connection background while the browser consult is pending",
+  ).toEqual([{ role: "user", text: spoken }]);
 
   releaseModel.resolve();
   await waitForDispatchEnd();

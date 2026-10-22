@@ -1,0 +1,155 @@
+name: Talk consult review proof
+
+on:
+  push:
+    branches: [proof/talk-consult-review-2026-10-22]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: talk-consult-review-proof-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  producers:
+    name: Real producer proof (${{ matrix.revision }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        revision: [base, fixed]
+    env:
+      CI: "true"
+      PROOF_REVISION: ${{ matrix.revision }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Select exact product source and identical producer tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          overlay="$RUNNER_TEMP/talk-producer-overlay"
+          mkdir -p "$overlay"
+          cp src/gateway/server.talk-consult-history.test.ts "$overlay/browser.test.ts"
+          cp src/gateway/talk/handlers/client-native-actions.test.ts "$overlay/native.test.ts"
+          if [ "$PROOF_REVISION" = base ]; then
+            git fetch --depth 1 origin 390d7993abd2878426b159b8016b4fef34700b62
+            git checkout --detach FETCH_HEAD
+            cp "$overlay/browser.test.ts" src/gateway/server.talk-consult-history.test.ts
+            cp "$overlay/native.test.ts" src/gateway/talk/handlers/client-native-actions.test.ts
+          fi
+          mkdir -p .artifacts/talk-review
+          git rev-parse HEAD > .artifacts/talk-review/checked-out-sha.txt
+      - uses: ./.github/actions/setup-node-env
+        with:
+          node-version: "24.21.0"
+          cache-mode: off
+          install-bun: "true"
+          install-deps: "true"
+      - name: Reproduce retained-input failure on exact upstream base
+        if: matrix.revision == 'base'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for producer in browser native; do
+            if [ "$producer" = browser ]; then
+              file=src/gateway/server.talk-consult-history.test.ts
+              title="keeps read-only Talk operator consult scaffolding out of chat but replays it as model context"
+            else
+              file=src/gateway/talk/handlers/client-native-actions.test.ts
+              title="keeps native generated input in current-turn custody but out of display and future calls"
+            fi
+            report="$PWD/.artifacts/talk-review/base-$producer.json"
+            log=".artifacts/talk-review/base-$producer.log"
+            set +e
+            pnpm test "$file" --maxWorkers=1 --reporter=json --outputFile="$report" -t "$title" > "$log" 2>&1
+            result=$?
+            set -e
+            cat "$log"
+            node --input-type=module - "$report" "$title" "$result" <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const [reportPath, title, exitCode] = process.argv.slice(2);
+          assert.equal(Number(exitCode), 1, 'Base must fail with a native test assertion exit');
+          const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+          assert.equal(report.numFailedTests, 1, 'Expected exactly one behavioral failure');
+          assert.equal(report.numPassedTests, 0, 'Only the selected test may execute');
+          assert.equal(report.numRuntimeErrorTestSuites ?? 0, 0, 'Runtime/setup failures are not proof');
+          assert.equal(report.testResults.length, 1, 'Expected exactly one producer test file');
+          const assertions = report.testResults[0].assertionResults;
+          const failures = assertions.filter((test) => test.status === 'failed');
+          assert.equal(failures.length, 1, 'Expected exactly one failed producer');
+          assert.equal(failures[0].title, title, 'The intended producer must fail');
+          assert(assertions.every((test) => test.status === 'failed' || ['pending', 'skipped', 'todo'].includes(test.status)), 'Unexpected tests executed');
+          const messages = failures[0].failureMessages;
+          assert(messages.length > 0, 'Missing behavior assertion failure');
+          const intended = /excludeFromContext|reopened model context replays the submitted prompt once|voice connection background while the browser consult is pending|pending native reconnect background (?:hides generated consult input|preserves only speech)/;
+          const unrelated = /timed out|timeout|Cannot find module|Failed to load|ERR_MODULE_NOT_FOUND|Unknown option|out of memory|ReferenceError|TypeError|SyntaxError|Unhandled|Missing native|Missing .*target|AssertionError: expected .* to be false/i;
+          assert(messages.every((message) => intended.test(message) && !unrelated.test(message)), 'Every failure must be the intended retained-input assertion');
+          fs.writeFileSync(reportPath.replace(/\.json$/, '-validated.json'), JSON.stringify({ result: 'expected-behavior-failure', base: '390d7993abd2878426b159b8016b4fef34700b62', test: title, nativeExitCode: Number(exitCode) }, null, 2) + '\n');
+          NODE
+          done
+      - name: Run focused fixed-source producer and compatibility fixture tests
+        if: matrix.revision == 'fixed'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          pnpm exec oxfmt --check src/gateway/server.talk-consult-history.test.ts src/gateway/talk/handlers/client-native-actions.test.ts scripts/e2e/lib/upgrade-survivor/assertions.mjs test/scripts/upgrade-survivor-baseline-order.test.ts test/scripts/upgrade-survivor-assertions.test.ts
+          pnpm test src/gateway/server.talk-consult-history.test.ts src/gateway/talk/handlers/client-native-actions.test.ts src/agents/embedded-agent-runner/run/attempt-llm-boundary.talk-consult.test.ts test/scripts/upgrade-survivor-baseline-order.test.ts test/scripts/upgrade-survivor-assertions.test.ts --maxWorkers=1 --reporter=verbose 2>&1 | tee .artifacts/talk-review/fixed-producers.log
+      - name: Upload synthetic producer evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: talk-producers-${{ matrix.revision }}
+          path: .artifacts/talk-review/
+          retention-days: 14
+
+  stable-upgrade:
+    name: Stable 2026.10.5 mixed Talk/chat upgrade
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CI: "true"
+      OPENCLAW_DOCKER_E2E_SELECTED_SHA: ${{ github.sha }}
+      OPENCLAW_UPGRADE_SURVIVOR_PUBLISHED_BASELINE: "1"
+      OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC: openclaw@2026.10.5
+      OPENCLAW_UPGRADE_SURVIVOR_SCENARIO: base
+      OPENCLAW_UPGRADE_SURVIVOR_LIVE_MODELS: ""
+      OPENCLAW_UPGRADE_SURVIVOR_LIVE_OPENAI: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-env
+        with:
+          node-version: "24.21.0"
+          cache-mode: off
+          install-bun: "true"
+          install-deps: "true"
+      - name: Run native published stable-to-candidate survivor lane
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/talk-review
+          git rev-parse HEAD > .artifacts/talk-review/candidate-source-sha.txt
+          pnpm test:docker:upgrade-survivor 2>&1 | tee .artifacts/talk-review/stable-upgrade.log
+      - name: Upload synthetic upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: talk-stable-upgrade
+          path: |
+            .artifacts/talk-review/
+            .artifacts/upgrade-survivor/**/summary.json
+            .artifacts/upgrade-survivor/**/mixed-talk-upgrade-history.json
+            .artifacts/upgrade-survivor/**/candidate-package-identity.json
+            .artifacts/upgrade-survivor/**/installed-package-identity.json
+          retention-days: 14
+

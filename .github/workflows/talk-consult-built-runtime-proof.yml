@@ -1,0 +1,61 @@
+name: Talk consult built Gateway proof
+
+on:
+  push:
+    branches: [proof/talk-consult-built-runtime-2026-10-23]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  built-gateway:
+    name: Built Gateway Talk context and pending reconnect
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CI: "true"
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-env
+        with:
+          node-version: "24.21.0"
+          cache-mode: off
+          install-bun: "true"
+          install-deps: "true"
+      - name: Check runtime proof source and workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/talk-built-runtime
+          git rev-parse HEAD > .artifacts/talk-built-runtime/source-sha.txt
+          git diff --check
+          pnpm check:workflows
+          pnpm exec oxfmt --check extensions/qa-lab/src/providers/mock-openai/server-options.ts extensions/qa-lab/src/providers/mock-openai/server.ts test/e2e/qa-lab/runtime/media-talk-gateway.ts
+      - name: Build the source Gateway with the native CI profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm build:ci-artifacts
+          cp dist/build-info.json .artifacts/talk-built-runtime/build-info.json
+      - name: Check the existing synthetic response-stream owner
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm test extensions/qa-lab/src/providers/mock-openai/server.responses-stream.test.ts --maxWorkers=1 --reporter=verbose 2>&1 | tee .artifacts/talk-built-runtime/mock-stream-test.log
+      - name: Exercise the existing QA producer through the built Gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --import ./scripts/tsx.mjs test/e2e/qa-lab/runtime/media-talk-gateway.ts --scenario talk-consult-prompt-cache --artifact-base .artifacts/talk-built-runtime --repo-root "$PWD" 2>&1 | tee .artifacts/talk-built-runtime/runtime.log
+      - name: Upload synthetic runtime receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: talk-built-gateway-runtime
+          path: .artifacts/talk-built-runtime/
+          retention-days: 14

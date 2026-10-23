@@ -77,6 +77,18 @@ const SCENARIOS = {
       "src/infra/outbound/message-action-send.ts",
     ],
   },
+  "talk-consult-prompt-cache": {
+    title: "Talk consult context retention through the built Gateway",
+    run: runTalkConsultPromptCacheProof,
+    sourcePath: "qa/scenarios/runtime/talk-consult-prompt-cache.yaml",
+    docsRefs: ["docs/nodes/talk.md", "docs/reference/prompt-caching.md"],
+    codeRefs: [
+      SOURCE_PATH,
+      "src/gateway/talk/handlers/client.ts",
+      "src/gateway/talk/session-history.ts",
+      "src/agents/embedded-agent-runner/run/attempt-llm-boundary.ts",
+    ],
+  },
   "active-talk-agent-run-status": {
     title: "Active Talk agent-run control boundaries",
     run: runActiveTalkAgentRunProof,
@@ -156,7 +168,7 @@ module.exports = {
       label: "QA Realtime",
       isConfigured: () => true,
       async createBrowserSession(request) {
-        fs.appendFileSync(process.env.OPENCLAW_QA_REALTIME_CALLS_PATH, JSON.stringify({ tools: request.tools?.map((tool) => tool.name) ?? [] }) + "\\n");
+        fs.appendFileSync(process.env.OPENCLAW_QA_REALTIME_CALLS_PATH, JSON.stringify({ tools: request.tools?.map((tool) => tool.name) ?? [], initialItems: request.initialItems, instructions: request.instructions }) + "\\n");
         return {
           provider: ${JSON.stringify(FIXTURE_REALTIME_PROVIDER_ID)},
           transport: "provider-websocket",
@@ -781,6 +793,229 @@ async function runActiveTalkAgentRunProof(options: ProducerOptions): Promise<str
     }
     return `real Gateway pid=${gateway.pid ?? "unknown"}; persistent WebChat connection completed status, steer, follow-up, cancel RPCs; steeringQueueDepths=${steeringQueueDepths.join(",")}; finalState=${finalState.outcome}; finalQueueDepth=${finalState.queueDepth}`;
   } finally {
+    client?.stop();
+    await stopQaGatewayFixture(gatewayOwner).catch(() => undefined);
+    await mock.stop();
+    await fs.rm(fixtureRoot, { force: true, recursive: true });
+  }
+}
+
+async function runTalkConsultPromptCacheProof(options: ProducerOptions): Promise<string> {
+  const fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-talk-cache-"));
+  const fixture = await createFixturePlugin(fixtureRoot);
+  const firstQuestion = "QA_TALK_CACHE_FIRST: acknowledge this request briefly.";
+  const secondQuestion = "QA_TALK_CACHE_SECOND: acknowledge the next request briefly.";
+  const spoken = "Please check the note.";
+  const clarification = "Also tomorrow; the phrase is violet compass.";
+  const requestReached = Promise.withResolvers<MockOpenAiRequestSnapshot>();
+  const responseReleased = Promise.withResolvers<void>();
+  let firstCaptured = false;
+  const mock = await startQaMockOpenAiServer({
+    beforeResponse: async (request) => {
+      if (!firstCaptured && request.prompt.includes(firstQuestion)) {
+        firstCaptured = true;
+        requestReached.resolve(request);
+        await responseReleased.promise;
+      }
+    },
+  });
+  const gatewayOwner = createQaGatewayChild();
+  let client: GatewayClient | undefined;
+  try {
+    const gateway = await gatewayOwner.start({
+      repoRoot: options.repoRoot,
+      useRepoCli: true,
+      providerBaseUrl: `${mock.baseUrl}/v1`,
+      providerMode: "mock-openai",
+      transportBaseUrl: "http://127.0.0.1",
+      controlUiEnabled: true,
+      runtimeEnvPatch: {
+        OPENCLAW_QA_SPEECH_CALLS_PATH: fixture.speechCallsPath,
+        OPENCLAW_QA_REALTIME_CALLS_PATH: fixture.realtimeCallsPath,
+      },
+      mutateConfig: (config) => {
+        const withPlugin = withFixturePlugin(config, fixture.pluginDir);
+        return {
+          ...withPlugin,
+          talk: {
+            ...withPlugin.talk,
+            realtime: {
+              ...withPlugin.talk?.realtime,
+              provider: FIXTURE_REALTIME_PROVIDER_ID,
+              providers: { [FIXTURE_REALTIME_PROVIDER_ID]: {} },
+            },
+          },
+        };
+      },
+    });
+    client = await connectGatewayClient({
+      clientName: GATEWAY_CLIENT_NAMES.WEBCHAT_UI,
+      mode: GATEWAY_CLIENT_MODES.WEBCHAT,
+      token: gateway.token,
+      url: gateway.wsUrl,
+    });
+    const sessionKey = "agent:qa:main";
+    const created = await client.request<{ voiceSessionId: string }>("talk.client.create", {
+      sessionKey,
+      provider: FIXTURE_REALTIME_PROVIDER_ID,
+      capabilities: ["voice-transcript"],
+    });
+    assert.equal(typeof created.voiceSessionId, "string");
+    const voiceSessionId = created.voiceSessionId;
+    await client.request("talk.client.transcript", {
+      sessionKey,
+      voiceSessionId,
+      entryId: "cache-before",
+      role: "user",
+      text: spoken,
+    });
+    const firstRun = await client.request<{ runId: string }>("talk.client.toolCall", {
+      sessionKey,
+      voiceSessionId,
+      callId: "cache-first",
+      name: "openclaw_agent_consult",
+      args: { question: firstQuestion },
+    });
+    assert.equal(typeof firstRun.runId, "string");
+    const firstSettlement = client.request<{ status: string }>("agent.wait", {
+      runId: firstRun.runId,
+      timeoutMs: 20_000,
+    });
+    // A terminal/refused run must fail promptly rather than leave an unreached gate pending.
+    const firstRequest = await Promise.race([
+      requestReached.promise,
+      firstSettlement.then(() => {
+        throw new Error("first consult settled before the external provider checkpoint");
+      }),
+    ]);
+    // The external HTTP provider has received a real agent request, but emitted no response.
+    assert.equal(firstRequest.requestKind, "agent-initial");
+    assert(Array.isArray(firstRequest.body.input), "expected actual Responses wire input");
+    await client.request("talk.client.transcript", {
+      sessionKey,
+      voiceSessionId,
+      entryId: "cache-during",
+      role: "user",
+      text: clarification,
+    });
+    const resumed = await client.request<{ voiceSessionId: string }>("talk.client.create", {
+      sessionKey,
+      voiceSessionId,
+      provider: FIXTURE_REALTIME_PROVIDER_ID,
+      capabilities: ["voice-transcript"],
+    });
+    assert.equal(
+      resumed.voiceSessionId,
+      voiceSessionId,
+      "pending reconnect changed the logical voice call",
+    );
+    const providerCalls = await readJsonLines(fixture.realtimeCallsPath);
+    assert.equal(providerCalls.length, 2, "pending reconnect must create a real provider session");
+    const pending = providerCalls[1];
+    assert(pending, "missing actual reconnect provider initialization");
+    assert.deepEqual(
+      pending.initialItems,
+      [
+        { role: "user", text: spoken },
+        { role: "user", text: clarification },
+      ],
+      "pending provider background must contain speech only before any assistant response",
+    );
+    assert(
+      !JSON.stringify(pending).includes(firstQuestion),
+      "pending provider init leaked generated consult input",
+    );
+    responseReleased.resolve();
+    const firstCompleted = await firstSettlement;
+    assert.equal(firstCompleted.status, "ok", "first real consult did not complete");
+    const secondRun = await client.request<{ runId: string }>("talk.client.toolCall", {
+      sessionKey,
+      voiceSessionId,
+      callId: "cache-second",
+      name: "openclaw_agent_consult",
+      args: { question: secondQuestion },
+    });
+    assert.notEqual(secondRun.runId, firstRun.runId);
+    const secondCompleted = await client.request<{ status: string }>("agent.wait", {
+      runId: secondRun.runId,
+      timeoutMs: 20_000,
+    });
+    assert.equal(secondCompleted.status, "ok", "second real consult did not complete");
+    const response = await fetch(`${mock.baseUrl}/debug/requests`);
+    assert.equal(response.status, 200);
+    const requests = (await response.json()) as MockOpenAiRequestSnapshot[];
+    const consultRequests = requests.filter(
+      (request) =>
+        request.prompt.includes(firstQuestion) || request.prompt.includes(secondQuestion),
+    );
+    assert.equal(
+      consultRequests.length,
+      2,
+      "expected exactly two real model requests without retries",
+    );
+    const secondRequest = consultRequests[1];
+    assert(secondRequest, "missing second actual model request");
+    assert(secondRequest.prompt.includes(secondQuestion));
+    assert(
+      !secondRequest.prompt.includes(clarification),
+      "second generated prompt must not supply the remembered speech",
+    );
+    const firstInput = firstRequest.body.input;
+    assert(Array.isArray(firstInput), "expected first actual Responses wire input");
+    const secondInput = secondRequest.body.input;
+    assert(Array.isArray(secondInput), "expected second actual Responses wire input");
+    assert.deepEqual(
+      secondInput.slice(0, firstInput.length),
+      firstInput,
+      "real provider input prefix changed between consults",
+    );
+    const text = (item: unknown) => JSON.stringify(item) ?? "";
+    const previousPrompts = secondInput.filter((item) => text(item).includes(firstQuestion));
+    assert.equal(
+      previousPrompts.length,
+      1,
+      "previous generated consult input must replay exactly once",
+    );
+    const speechIndex = secondInput.findIndex((item) => text(item).includes(clarification));
+    const assistantIndex = secondInput.findLastIndex(
+      (item: unknown) =>
+        item !== null && typeof item === "object" && "role" in item && item.role === "assistant",
+    );
+    assert(
+      assistantIndex >= firstInput.length,
+      "first consult response missing from next real model input",
+    );
+    assert(
+      speechIndex > assistantIndex,
+      "speech during the consult must survive after its assistant response",
+    );
+    await fs.mkdir(options.artifactBase, { recursive: true });
+    await fs.writeFile(
+      path.join(options.artifactBase, "talk-consult-runtime-receipt.json"),
+      JSON.stringify(
+        {
+          source: "built Gateway with real agent execution and synthetic external HTTP provider",
+          liveProviderTested: false,
+          voiceAudioTested: false,
+          firstRunId: firstRun.runId,
+          secondRunId: secondRun.runId,
+          pendingProviderInitialItems: pending.initialItems,
+          pendingGeneratedInputHidden: true,
+          previousGeneratedInputCount: previousPrompts.length,
+          wirePrefixUnchanged: true,
+          firstWireInputItems: firstInput.length,
+          secondWireInputItems: secondInput.length,
+          retainedSpeech: clarification,
+          firstAssistantIndex: assistantIndex,
+          clarificationIndex: speechIndex,
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+    return "built Gateway completed two real browser consult agent runs; pending provider init hid generated input; actual HTTP model input retained the previous consult and deferred speech with unchanged prefix; no live provider or audio exercised";
+  } finally {
+    responseReleased.resolve();
     client?.stop();
     await stopQaGatewayFixture(gatewayOwner).catch(() => undefined);
     await mock.stop();

@@ -2204,6 +2204,7 @@ export async function startQaMockOpenAiServer(params?: QaMockOpenAiServerOptions
     if (stalledTurnAttempt) {
       scenarioState.stalledTurnRecoveryAttempts += 1;
     }
+    await params?.beforeResponse?.(recorded);
     const held = requestLog.waitForContinuation(recorded);
     if (held) {
       await held;

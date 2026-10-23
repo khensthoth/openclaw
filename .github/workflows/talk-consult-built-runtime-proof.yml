@@ -16,6 +16,8 @@ jobs:
     env:
       CI: "true"
       NODE_OPTIONS: --max-old-space-size=4096
+      OPENCLAW_BUILD_PRIVATE_QA: "1"
+      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -36,7 +38,7 @@ jobs:
           git diff --check
           pnpm check:workflows
           pnpm exec oxfmt --check extensions/qa-lab/src/providers/mock-openai/server-options.ts extensions/qa-lab/src/providers/mock-openai/server.ts test/e2e/qa-lab/runtime/media-talk-gateway.ts
-      - name: Build the source Gateway with the native CI profile
+      - name: Build the source Gateway and Control UI with private QA entries
         shell: bash
         run: |
           set -euo pipefail

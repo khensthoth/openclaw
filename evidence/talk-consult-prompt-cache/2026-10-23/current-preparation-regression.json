@@ -1,0 +1,55 @@
+{
+  "workflowRun": "https://github.com/khensthoth/openclaw/actions/runs/39930234710",
+  "proofSource": "6e582609b0eb8a575316fd1c68fc8c3e711317ef",
+  "currentPrHead": "bbb9caa27a628cbea73cdb1f3429d1fae91b9c1d",
+  "priorSource": "5c86a193e4531ff920a4e4dd858c470787477342",
+  "base": {
+    "validation": {
+      "result": "expected-preparation-failure",
+      "base": "5c86a193e4531ff920a4e4dd858c470787477342",
+      "failedCases": 3
+    },
+    "failedTests": 3,
+    "failures": [
+      {
+        "name": "prepareEmbeddedAttemptSessionBoundary orphan recovery keeps mirrored Talk speech separate from tagged consult input: native-recorder",
+        "messages": [
+          "AssertionError: expected { …(4) } to be undefined\n    at /home/runner/work/openclaw/openclaw/src/agents/embedded-agent-runner/run/attempt-session-boundary.orphan.test.ts:<redacted len=6>\n    at /home/runner/work/openclaw/openclaw/src/agents/embedded-agent-runner/run/attempt-session-boundary.orphan.test.ts:<redacted len=5>"
+        ]
+      },
+      {
+        "name": "prepareEmbeddedAttemptSessionBoundary orphan recovery keeps mirrored Talk speech separate from tagged consult input: prepared-message",
+        "messages": [
+          "AssertionError: expected { …(4) } to be undefined\n    at /home/runner/work/openclaw/openclaw/src/agents/embedded-agent-runner/run/attempt-session-boundary.orphan.test.ts:<redacted len=6>\n    at /home/runner/work/openclaw/openclaw/src/agents/embedded-agent-runner/run/attempt-session-boundary.orphan.test.ts:<redacted len=5>"
+        ]
+      },
+      {
+        "name": "prepareEmbeddedAttemptSessionBoundary orphan recovery keeps mirrored Talk speech separate from tagged consult input: browser-provenance",
+        "messages": [
+          "AssertionError: expected { …(4) } to be undefined\n    at /home/runner/work/openclaw/openclaw/src/agents/embedded-agent-runner/run/attempt-session-boundary.orphan.test.ts:<redacted len=6>\n    at /home/runner/work/openclaw/openclaw/src/agents/embedded-agent-runner/run/attempt-session-boundary.orphan.test.ts:<redacted len=5>"
+        ]
+      }
+    ]
+  },
+  "fixed": {
+    "result": "passed",
+    "testFiles": 5,
+    "testsPassed": 47,
+    "testsFailed": 0,
+    "shardsPassed": 4,
+    "checks": [
+      "pnpm check:workflows",
+      "oxfmt --check"
+    ],
+    "coverage": [
+      "native recorder consult provenance",
+      "prepared-message consult provenance",
+      "browser consult provenance",
+      "speech finalized during write admission",
+      "ordinary unanswered-message and restart recovery",
+      "Talk replay ordering",
+      "mandatory agent-tool prompt-prefix stability"
+    ]
+  },
+  "scope": "Owner-boundary regression proof. Current PR differs from this proof only in two user-role type guards inside the new test; independent review confirms equivalent strict assertions. Product source and docs are identical."
+}

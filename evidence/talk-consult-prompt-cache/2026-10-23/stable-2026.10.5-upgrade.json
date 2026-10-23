@@ -1,0 +1,35 @@
+{
+  "status": "passed",
+  "workflowRun": "https://github.com/khensthoth/openclaw/actions/runs/39799987875",
+  "sourceCommit": "c8aa3b1dd2fda189f2b8d09939f68aed38c9b586",
+  "productSourceHead": "152671f3987b607026d7a3123a7737e2439c6942",
+  "baseline": {
+    "spec": "openclaw@2026.10.5",
+    "version": "2026.10.5"
+  },
+  "scenario": "base",
+  "installedVersion": "2026.10.5",
+  "candidateInstallMode": "updater",
+  "candidateBuildInfo": {
+    "version": "2026.10.5",
+    "commit": "c8aa3b1dd2fda189f2b8d09939f68aed38c9b586",
+    "builtAt": "2026-10-22T14:57:08.400Z",
+    "buildId": "2026.10.5-c8aa3b1dd2fd-2026-10-22T14-57-08.400Z"
+  },
+  "candidateTarballSha256": "1186583158bf389bcee8d363d85af0cc5b5b9944d296d21ef3604897169cfcd5",
+  "candidateAndInstalledInventoryIdentical": true,
+  "inventoryCount": 18119,
+  "inventorySha256": "795eeebdf49c3cf7f4c32f4536a9c8aa902e292fdc7996c43288e75e09029f9d",
+  "history": {
+    "status": "passed",
+    "sessionId": "upgrade-main-session",
+    "visibleMessages": [
+      "UPGRADE_CHAT: Check my calendar.",
+      "UPGRADE_CHAT_REPLY: I will check.",
+      "UPGRADE_SPEECH: Also tomorrow; silver mango."
+    ],
+    "legacyGeneratedInputHidden": true,
+    "modelCalled": false
+  },
+  "failure": null
+}

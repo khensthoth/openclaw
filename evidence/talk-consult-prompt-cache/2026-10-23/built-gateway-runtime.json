@@ -1,0 +1,40 @@
+{
+  "status": "pass",
+  "workflowRun": "https://github.com/khensthoth/openclaw/actions/runs/39931480192",
+  "proofSource": "8b6f601122d69002a8431d6de1fd619e2c592b91",
+  "buildInfo": {
+    "version": "2026.10.6",
+    "commit": "8b6f601122d69002a8431d6de1fd619e2c592b91",
+    "builtAt": "2026-10-23T09:25:31.771Z",
+    "buildId": "2026.10.6-8b6f601122d6-2026-10-23T09-25-31.771Z"
+  },
+  "runtimeReceipt": {
+    "source": "built Gateway with real agent execution and synthetic external HTTP provider",
+    "liveProviderTested": false,
+    "voiceAudioTested": false,
+    "firstRunId": "talk-5dee50f94d2ee865b7454aa87312aaa0ee6d06f022d82d57bca3867d6e727738",
+    "secondRunId": "talk-2e9a01b8d42e36f53ae3cce6b54f758156eb997e94b8c055a0214a8a2e58ebfa",
+    "pendingProviderInitialItems": [
+      {
+        "role": "user",
+        "text": "Please check the note."
+      },
+      {
+        "role": "user",
+        "text": "Also tomorrow; the phrase is violet compass."
+      }
+    ],
+    "pendingGeneratedInputHidden": true,
+    "previousGeneratedInputCount": 1,
+    "wirePrefixThroughConsultUnchanged": true,
+    "comparedPrefixItems": 3,
+    "comparedPrefixScope": "contiguous actual Responses input through the first generated consult",
+    "entireRequestPrefixTested": false,
+    "firstWireInputItems": 4,
+    "secondWireInputItems": 7,
+    "retainedSpeech": "Also tomorrow; the phrase is violet compass.",
+    "firstAssistantIndex": 3,
+    "clarificationIndex": 4
+  },
+  "durationMs": 165831
+}

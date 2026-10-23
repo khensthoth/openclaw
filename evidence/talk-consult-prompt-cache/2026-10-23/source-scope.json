@@ -1,0 +1,19 @@
+{
+  "currentPrHead": "bbb9caa27a628cbea73cdb1f3429d1fae91b9c1d",
+  "upstreamBase": "54dd1c6d9a56fdd323bcc26392ef27ccaf881a3b",
+  "greenPriorMerge": "5c86a193e4531ff920a4e4dd858c470787477342",
+  "proofs": {
+    "preparation": "6e582609b0eb8a575316fd1c68fc8c3e711317ef",
+    "latestStableUpgrade": "9823985134b782dc6e1c5768308e9ef13b5fd0c4",
+    "builtGateway": "8b6f601122d69002a8431d6de1fd619e2c592b91"
+  },
+  "comparison": "git diff --exit-code current PR versus built proof for src excluding *.test.ts and docs: identical. Full src/docs diff names exactly one test file; PR changes only two user-role type guards with equivalent assertions. Earlier focused/upgrade proof has the same product source.",
+  "result": "identical product source and docs; one equivalent test-only type correction",
+  "candidateDeclaredVersion": "2026.10.6",
+  "scope": "Proof branches add only QA fixture instrumentation, synthetic upgrade assertions and workflows. Main integration changes package identity normally; no hand-edited version or saved config metadata.",
+  "repairedProductCommit": "4b9552d8195300880168081d0c850304678c0a85",
+  "testOnlyDifference": {
+    "path": "src/agents/embedded-agent-runner/run/attempt-session-boundary.orphan.test.ts",
+    "change": "Two user-role guards narrow AgentMessage before reading content; non-user entries remain undefined and fail strict equality."
+  }
+}

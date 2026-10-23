@@ -1,0 +1,18 @@
+{
+  "prHead": "bbb9caa27a628cbea73cdb1f3429d1fae91b9c1d",
+  "workflowRun": "https://github.com/openclaw/openclaw/actions/runs/39932582291",
+  "workflowConclusion": "success",
+  "commitStatus": "success",
+  "contexts": {
+    "openclaw/dependency-review": "success",
+    "openclaw/security-sensitive-review": "success",
+    "openclaw/ci-gate": "success"
+  },
+  "checkedAtUtc": "2026-10-23T09:55:44Z",
+  "previousFailure": {
+    "head": "4b9552d8195300880168081d0c850304678c0a85",
+    "jobId": 120340817153,
+    "cause": "Two regression-test projections read AgentMessage.content before narrowing away BashExecutionMessage.",
+    "repair": "Explicit user-role guards retain unexpected entries as undefined so strict equality still fails; no product behavior or test equality relaxation."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "result": "passed",
+  "workflowRun": "https://github.com/khensthoth/openclaw/actions/runs/39879508535",
+  "jobId": 120173207557,
+  "proofSource": "4dddbb7d65e09ec7107b050ce8b9278221da26b3",
+  "productSource": "152671f3987b607026d7a3123a7737e2439c6942",
+  "tests": {
+    "total": 134,
+    "passed": 134,
+    "failed": 0,
+    "modelBoundary": 6,
+    "upgradeFixturesAndBaselineOrder": 93,
+    "nativeProducer": 13,
+    "browserProducer": 22
+  },
+  "checks": [
+    "pnpm check:workflows",
+    "oxfmt --check"
+  ],
+  "pendingBehavior": {
+    "browser": "Reopen voice background while real client-tool-call consult has not emitted a first model response; generated input hidden, genuine speech retained.",
+    "native": "Replace native transport before first model response; genuine speech background retained, generated consult hidden, accepted task completes once without abort or stale requester-final transfer."
+  },
+  "scope": "Source integration tests use real producer registration/session owners and controlled model response fixtures. This receipt does not claim live audio, a complete source-built Gateway process, or external provider cache hits."
+}

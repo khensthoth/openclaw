@@ -1,0 +1,46 @@
+{
+  "workflowRun": "https://github.com/khensthoth/openclaw/actions/runs/39879508535",
+  "proofSource": "4dddbb7d65e09ec7107b050ce8b9278221da26b3",
+  "upstreamBase": "390d7993abd2878426b159b8016b4fef34700b62",
+  "routes": [
+    {
+      "route": "browser",
+      "validation": {
+        "result": "expected-behavior-failure",
+        "base": "390d7993abd2878426b159b8016b4fef34700b62",
+        "test": "keeps read-only Talk operator consult scaffolding out of chat but replays it as model context",
+        "nativeExitCode": 1
+      },
+      "failedTests": 1,
+      "passedTests": 0,
+      "failures": [
+        {
+          "name": "keeps read-only Talk operator consult scaffolding out of chat but replays it as model context",
+          "messages": [
+            "AssertionError: expected { role: 'user', display: false, …(6) } to not have property \"excludeFromContext\"\n    at /home/runner/work/openclaw/openclaw/src/gateway/server.talk-consult-history.test.ts:649:33\n    at async file:///home/runner/work/openclaw/openclaw/node_modules/.pnpm/vitest@5.0.3_patch_hash=b9cf06b8bd5da1ffe896837133366083382a1bbe0fb5b39274ebde46d060d53_b45aa590e93ee23551a09b923e7ac2f5/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20",
+            "AssertionError: reopened model context replays the submitted prompt once: expected [] to have a length of 1 but got +0\n    at Proxy.<anonymous> (file:///home/runner/work/openclaw/openclaw/node_modules/.pnpm/vitest@5.0.3_patch_hash=b9cf06b8bd5da1ffe896837133366083382a1bbe0fb5b39274ebde46d060d53_b45aa590e93ee23551a09b923e7ac2f5/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2147:20)\n    at Proxy.<anonymous> (file:///home/runner/work/openclaw/openclaw/node_modules/.pnpm/vitest@5.0.3_patch_hash=b9cf06b8bd5da1ffe896837133366083382a1bbe0fb5b39274ebde46d060d53_b45aa590e93ee23551a09b923e7ac2f5/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///home/runner/work/openclaw/openclaw/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)\n    at /home/runner/work/openclaw/openclaw/src/gateway/server.talk-consult-history.test.ts:665:7\n    at async file:///home/runner/work/openclaw/openclaw/node_modules/.pnpm/vitest@5.0.3_patch_hash=b9cf06b8bd5da1ffe896837133366083382a1bbe0fb5b39274ebde46d060d53_b45aa590e93ee23551a09b923e7ac2f5/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "native",
+      "validation": {
+        "result": "expected-behavior-failure",
+        "base": "390d7993abd2878426b159b8016b4fef34700b62",
+        "test": "keeps native generated input in current-turn custody but out of display and future calls",
+        "nativeExitCode": 1
+      },
+      "failedTests": 1,
+      "passedTests": 0,
+      "failures": [
+        {
+          "name": "native Talk action ownership through public plugin registration keeps native generated input in current-turn custody but out of display and future calls",
+          "messages": [
+            "AssertionError: expected { role: 'user', …(5) } to not have property \"excludeFromContext\"\n    at /home/runner/work/openclaw/openclaw/src/gateway/talk/handlers/client-native-actions.test.ts:279:39\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at /home/runner/work/openclaw/openclaw/src/gateway/talk/handlers/client-native-control.test-support.ts:302:9"
+          ]
+        }
+      ]
+    }
+  ]
+}

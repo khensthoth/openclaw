@@ -6,7 +6,7 @@
 
 ARG OPENCLAW_NODE_ALPINE_IMAGE="docker.io/library/node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1"
 
-FROM node:24-trixie-slim@sha256:7f486cabe892bff8fef04c0f7da8dba84a560be3e4e2740b7a86afc57ebec315 AS e2e-runner
+FROM node:24.22.1-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS e2e-runner
 
 # openssl provisions short-lived fixture certificates for HTTPS-only provider
 # routes. python3 covers package/plugin install paths that execute helper scripts.

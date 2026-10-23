@@ -100,6 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           git diff --check
+          pnpm check:workflows
           pnpm exec oxfmt --check src/gateway/server.talk-consult-history.test.ts src/gateway/talk/handlers/client-native-actions.test.ts scripts/e2e/lib/upgrade-survivor/assertions.mjs test/scripts/upgrade-survivor-baseline-order.test.ts test/scripts/upgrade-survivor-assertions.test.ts
           pnpm test src/gateway/server.talk-consult-history.test.ts src/gateway/talk/handlers/client-native-actions.test.ts src/agents/embedded-agent-runner/run/attempt-llm-boundary.talk-consult.test.ts test/scripts/upgrade-survivor-baseline-order.test.ts test/scripts/upgrade-survivor-assertions.test.ts --maxWorkers=1 --reporter=verbose 2>&1 | tee .artifacts/talk-review/fixed-producers.log
       - name: Upload synthetic producer evidence
@@ -111,7 +112,7 @@ jobs:
           retention-days: 14
 
   stable-upgrade:
-    name: Stable 2026.10.5 mixed Talk/chat upgrade
+    name: Stable 2026.10.6 mixed Talk/chat upgrade
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
@@ -119,7 +120,7 @@ jobs:
       OPENCLAW_DOCKER_E2E_SELECTED_SHA: ${{ github.sha }}
       OPENCLAW_UPGRADE_SURVIVOR_DOCKER_RUN_TIMEOUT: "3600s"
       OPENCLAW_UPGRADE_SURVIVOR_PUBLISHED_BASELINE: "1"
-      OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC: openclaw@2026.10.5
+      OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC: openclaw@2026.10.6
       OPENCLAW_UPGRADE_SURVIVOR_SCENARIO: base
       OPENCLAW_UPGRADE_SURVIVOR_LIVE_MODELS: ""
       OPENCLAW_UPGRADE_SURVIVOR_LIVE_OPENAI: "0"

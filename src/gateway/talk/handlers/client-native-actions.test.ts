@@ -55,6 +55,7 @@ import {
   nativeDelegation,
   nativeResult,
   requireString,
+  settleNativeBackend,
   talkEventTypes,
   upstream,
   withParkedNativeTask,
@@ -311,9 +312,19 @@ describe("native Talk action ownership through public plugin registration", () =
         expect(streamMocks.streamSimple).toHaveBeenCalledOnce();
         expect(spokenMessages(replacement.socket.sent)).toEqual([]);
         ({ socket, result } = replacement);
-        finish();
+        await settleNativeBackend(finish);
         await modelRun;
-        await vi.waitFor(() => expect(spokenMessages(socket.sent)).toContain(answerText));
+        await upstream.runEmbeddedAgent.mock.results[0]!.value;
+        expect(run.abortSignal?.aborted).toBe(false);
+        expect(upstream.runEmbeddedAgent).toHaveBeenCalledOnce();
+        // Replacing the transport revokes its requester-final binding, not the retained task.
+        // The shared answer persists; the new socket cannot inherit a stale delegation result.
+        expect(
+          projectChatDisplayMessages(await readHistory("native pending reconnect completion")).map(
+            extractText,
+          ),
+        ).toEqual([spoken, answerText]);
+        expect(spokenMessages(socket.sent)).toEqual([]);
         // Speech stays a distinct raw record; the UI discloses it without claiming replacement.
         const readback = answerText;
         const dialogue = "OpenClaw is waiting on the model.";

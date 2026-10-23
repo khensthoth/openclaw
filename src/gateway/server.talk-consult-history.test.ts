@@ -606,7 +606,9 @@ it("keeps read-only Talk operator consult scaffolding out of chat but replays it
   // Reconnect background must hide the real persisted input before any model response exists.
   const pendingTarget = await prepareTalkSessionTarget(getRuntimeConfig(), sessionKey);
   expect(
-    await readTalkRealtimeInitialItems(pendingTarget, pendingTarget.assertCurrent),
+    await readTalkRealtimeInitialItems(pendingTarget, () =>
+      pendingTarget.assertCurrent(getRuntimeConfig()),
+    ),
     "voice connection background while the browser consult is pending",
   ).toEqual([{ role: "user", text: spoken }]);
 

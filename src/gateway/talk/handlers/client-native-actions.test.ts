@@ -319,11 +319,10 @@ describe("native Talk action ownership through public plugin registration", () =
         expect(upstream.runEmbeddedAgent).toHaveBeenCalledOnce();
         // Replacing the transport revokes its requester-final binding, not the retained task.
         // The shared answer persists; the new socket cannot inherit a stale delegation result.
-        expect(
-          projectChatDisplayMessages(await readHistory("native pending reconnect completion")).map(
-            extractText,
-          ),
-        ).toEqual([spoken, answerText]);
+        expect(await readSessionPreviewItemsFromTranscriptAsync(scope, 16, 800)).toEqual([
+          { role: "user", text: spoken },
+          { role: "assistant", text: answerText },
+        ]);
         expect(spokenMessages(socket.sent)).toEqual([]);
         // Speech stays a distinct raw record; the UI discloses it without claiming replacement.
         const readback = answerText;

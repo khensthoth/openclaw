@@ -314,7 +314,9 @@ describe("prepareEmbeddedAttemptSessionBoundary orphan recovery", () => {
             { role: "user", content: "orphan wake" },
           ]);
           const firstCallContents = [
-            ...input.activeSession.agent.state.messages.map((message) => message.content),
+            ...input.activeSession.agent.state.messages.map((message) =>
+              message.role === "user" ? message.content : undefined,
+            ),
             prompt,
           ];
           expect(firstCallContents).toEqual(["orphan wake", prompt]);
@@ -332,7 +334,9 @@ describe("prepareEmbeddedAttemptSessionBoundary orphan recovery", () => {
             { role: "assistant", content: [{ type: "text", text: "consult reply" }] },
           ]);
           expect(
-            replay.slice(0, firstCallContents.length).map((message) => message.content),
+            replay
+              .slice(0, firstCallContents.length)
+              .map((message) => (message.role === "user" ? message.content : undefined)),
           ).toEqual(firstCallContents);
           expect(reopened.getBranch().map((entry) => entry.id)).toContain(orphanId);
           expect(loadTranscriptEventsSync(target)).not.toEqual(

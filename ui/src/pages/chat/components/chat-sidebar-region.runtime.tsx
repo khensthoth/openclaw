@@ -1,6 +1,6 @@
 import "../../../styles/chat/side-panel.css";
 import { Portal } from "@solidjs/web";
-import { For, Show, createSignal, onCleanup, onSettled, untrack } from "solid-js";
+import { For, Show, createSignal, onSettled } from "solid-js";
 import { registryFor } from "../../../components/overlay-registry.ts";
 import { PANEL_HOSTED_TABS_CHANGE_EVENT } from "../../../components/panel-hosted-tabs.ts";
 import {
@@ -55,10 +55,14 @@ const regionOperations = new WeakMap<
 function Region(props: RegionProps, host: RegionElement) {
   const panelHosts = new Map<SidebarSlotId, SidebarPanelHost>();
   const panelElements = new Map<string, HTMLDivElement>();
+  const panelRef = (id: string) =>
+    elementRef((element: HTMLDivElement) => {
+      panelElements.set(id, element);
+      return () => panelElements.delete(id);
+    });
   let sideHeader: HTMLElement | null = null;
   let localBack: HTMLElement | undefined;
   const tabFocus = createTabFocus();
-  const focusActiveSideTab = tabFocus.focusActive;
   const operations = {
     readMobileChromeHeight: () =>
       (props.mobileHost?.destination.area === "panels"
@@ -68,7 +72,7 @@ function Region(props: RegionProps, host: RegionElement) {
       panelHosts.get(slot) ??
       props.panelDefinitions.find((definition) => definition.slot === slot)?.panelHost ??
       null,
-    focusActiveSideTab,
+    focusActiveSideTab: tabFocus.focusActive,
     inputsChanged(key: keyof RegionProps) {
       if (key === "elements") {
         bindHostedTabsRoot();
@@ -161,7 +165,7 @@ function Region(props: RegionProps, host: RegionElement) {
     focusedSurface = header;
     const restoreFocus = () => {
       if (props.layout.open && focusedSurface === header && header?.isConnected) {
-        focusActiveSideTab();
+        tabFocus.focusActive();
       }
     };
     const scope = props.panelIdPrefix;
@@ -262,7 +266,7 @@ function Region(props: RegionProps, host: RegionElement) {
           const now = document.activeElement;
           const moved = now instanceof HTMLElement && now !== document.body && now !== origin;
           if (props.sideFocusLocked && !moved) {
-            focusActiveSideTab();
+            tabFocus.focusActive();
           }
         });
       }
@@ -424,12 +428,9 @@ function Region(props: RegionProps, host: RegionElement) {
       >
         <For each={panels()} keyed={(panel) => panel.id}>
           {(panel) => {
-            // The semantic key owns this container until that panel is removed.
-            const initialPanelId = untrack(() => panel().id);
-            onCleanup(() => panelElements.delete(initialPanelId));
             return (
               <div
-                ref={(element) => panelElements.set(initialPanelId, element)}
+                ref={[panelRef(panel().id)]}
                 id={`${props.panelIdPrefix}-${encodeURIComponent(panel().slot)}`}
                 class="side-panel__panel"
                 role="region"
@@ -651,16 +652,16 @@ function Region(props: RegionProps, host: RegionElement) {
   onSettled(() => {
     scheduleGeometryCommit();
     scheduleFocusTransition();
-  });
-  onCleanup(() => {
-    regionOperations.delete(host);
-    stopHostedTabs();
-    listeners.abort();
-    focusedSurface = null;
-    cancelLayout(host);
-    if (focusFrame !== null) {
-      cancelAnimationFrame(focusFrame);
-    }
+    return () => {
+      regionOperations.delete(host);
+      stopHostedTabs();
+      listeners.abort();
+      focusedSurface = null;
+      cancelLayout(host);
+      if (focusFrame !== null) {
+        cancelAnimationFrame(focusFrame);
+      }
+    };
   });
   return (
     <Show when={props.elements}>

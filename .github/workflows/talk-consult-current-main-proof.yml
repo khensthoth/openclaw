@@ -1,0 +1,109 @@
+name: Talk consult current-main repair proof
+
+on:
+  push:
+    branches: [proof/talk-consult-current-main-2026-10-23]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    if: github.repository == 'khensthoth/openclaw'
+    name: Consult preparation and history owners
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-env
+        with:
+          node-version: "24.22.1"
+          cache-mode: off
+          install-bun: "true"
+          install-deps: "true"
+      - name: Check and exercise the actual preparation owners
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/talk-current-main
+          git rev-parse HEAD > .artifacts/talk-current-main/source-sha.txt
+          git diff --check
+          pnpm check:workflows
+          pnpm exec oxfmt --check src/agents/embedded-agent-runner/run/attempt-session-prepare.ts src/agents/embedded-agent-runner/run/attempt-session-boundary.orphan.test.ts
+          pnpm test src/agents/embedded-agent-runner/run/attempt-session-boundary*.test.ts src/agents/embedded-agent-runner/run/attempt-llm-boundary.talk-consult.test.ts src/agents/agent-tools.prefix-stability.test.ts --maxWorkers=1 --reporter=verbose 2>&1 | tee .artifacts/talk-current-main/focused.log
+      - name: Upload synthetic preparation receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: talk-current-main-fixed
+          path: .artifacts/talk-current-main/
+          retention-days: 14
+
+  base:
+    if: github.repository == 'khensthoth/openclaw'
+    name: Reproduce preparation defect before repair
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Select exact prior product source and identical regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp src/agents/embedded-agent-runner/run/attempt-session-boundary.orphan.test.ts "$RUNNER_TEMP/talk-orphan-regression.ts"
+          git fetch --depth 1 origin 5c86a193e4531ff920a4e4dd858c470787477342
+          git checkout --detach FETCH_HEAD
+          cp "$RUNNER_TEMP/talk-orphan-regression.ts" src/agents/embedded-agent-runner/run/attempt-session-boundary.orphan.test.ts
+          mkdir -p .artifacts/talk-current-main
+          git rev-parse HEAD > .artifacts/talk-current-main/source-sha.txt
+      - uses: ./.github/actions/setup-node-env
+        with:
+          node-version: "24.22.1"
+          cache-mode: off
+          install-bun: "true"
+          install-deps: "true"
+      - name: Require the exact preparation assertion failures
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          pnpm test src/agents/embedded-agent-runner/run/attempt-session-boundary.orphan.test.ts --maxWorkers=1 --reporter=json --outputFile="$PWD/.artifacts/talk-current-main/base.json" -t "keeps mirrored Talk speech separate from tagged consult input" > .artifacts/talk-current-main/base.log 2>&1
+          result=$?
+          set -e
+          cat .artifacts/talk-current-main/base.log
+          node --input-type=module - "$result" <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report = JSON.parse(fs.readFileSync('.artifacts/talk-current-main/base.json', 'utf8'));
+          assert.equal(Number(process.argv[2]), 1);
+          assert.equal(report.numFailedTests, 3);
+          assert.equal(report.numPassedTests, 0);
+          assert.equal(report.numRuntimeErrorTestSuites ?? 0, 0);
+          assert.equal(report.testResults.length, 1);
+          const failures = report.testResults[0].assertionResults.filter(test => test.status === 'failed');
+          assert.equal(failures.length, 3);
+          for (const test of failures) {
+            assert(test.title.startsWith('keeps mirrored Talk speech separate from tagged consult input:'));
+            assert(test.failureMessages.length > 0);
+            assert(test.failureMessages.every(message => /to be undefined/.test(message) && !/TypeError|ReferenceError|SyntaxError|timed out|Cannot find module/i.test(message)));
+          }
+          fs.writeFileSync('.artifacts/talk-current-main/base-validated.json', JSON.stringify({ result: 'expected-preparation-failure', base: '5c86a193e4531ff920a4e4dd858c470787477342', failedCases: 3 }, null, 2) + '\n');
+          NODE
+      - name: Upload synthetic prior-source receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: talk-current-main-base
+          path: .artifacts/talk-current-main/
+          retention-days: 14

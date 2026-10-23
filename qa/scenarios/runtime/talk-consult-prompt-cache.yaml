@@ -1,0 +1,34 @@
+title: Talk consult context retention through the built Gateway
+
+scenario:
+  id: talk-consult-prompt-cache
+  surface: voice
+  category: voice.realtime-talk-sessions
+  coverage:
+    primary:
+      - voice.talk-consult-prompt-cache
+  objective: Preserve generated consult model context and real speech while keeping pending voice background free of internal input.
+  successCriteria:
+    - An actual built Gateway and real agent loop complete two browser Talk consults using a synthetic external HTTP provider.
+    - A same-call browser reconnect before the first provider response includes genuine speech and hides generated consult input.
+    - The second actual model request retains the first generated consult input exactly once with an unchanged contiguous input prefix through the first consult.
+    - Speech appended during the first consult survives after its assistant response without repetition in the second question.
+    - Evidence explicitly distinguishes synthetic HTTP inference from live voice or provider verification.
+  docsRefs:
+    - docs/nodes/talk.md
+    - docs/reference/prompt-caching.md
+  codeRefs:
+    - test/e2e/qa-lab/runtime/media-talk-gateway.ts
+    - src/gateway/talk/handlers/client.ts
+    - src/gateway/talk/session-history.ts
+    - src/agents/embedded-agent-runner/run/attempt-llm-boundary.ts
+  execution:
+    kind: script
+    parallelSafe: true
+    path: test/e2e/qa-lab/runtime/media-talk-gateway.ts
+    summary: Runs real browser Talk consults through the built Gateway against a synthetic HTTP model, captures pending provider initialization, and checks actual model request context.
+    args:
+      - --scenario
+      - talk-consult-prompt-cache
+      - --artifact-base
+      - ${outputDir}

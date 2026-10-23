@@ -290,7 +290,8 @@ if (process.argv[2] === "startup") {
   for (const id of ["upgrade-main-session", "upgrade-direct-session", "upgrade-group-session"]) {
     const row = rows.find(row => row.sessionId === id);
     assert.ok(row, "missing original session " + id);
-    assert.equal(JSON.parse(fs.readFileSync(row.sessionFile, "utf8")).id, id);
+    const header = fs.readFileSync(row.sessionFile, "utf8").split(String.fromCharCode(10))[0];
+    assert.equal(JSON.parse(header).id, id);
   }
   assert.equal(rows.filter(row => row.sessionId.startsWith("volume-")).length, volume ? 12 : 0);
   fs.writeFileSync(process.env.PROBE_RESULT, JSON.stringify({ rows: rows.length, volume }));

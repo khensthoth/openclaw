@@ -479,6 +479,40 @@ describe("upgrade recovery result assertions", () => {
   });
 });
 
+function mixedTalkTranscriptEntries() {
+  const turns = [
+    ["user", "UPGRADE_CHAT: Check my calendar."],
+    ["assistant", "UPGRADE_CHAT_REPLY: I will check."],
+    ["user", "UPGRADE_INTERNAL: Consult about the calendar."],
+    ["user", "UPGRADE_SPEECH: Also tomorrow; silver mango."],
+    ["assistant", "UPGRADE_CONSULT_REPLY: Both days checked."],
+  ] as const;
+  return turns.map(([role, text], index) => {
+    const timestamp = 1710000000000 + index * 1000;
+    return {
+      type: "message",
+      id: `upgrade-mixed-${index}`,
+      parentId: index === 0 ? null : `upgrade-mixed-${index - 1}`,
+      timestamp: new Date(timestamp).toISOString(),
+      message: {
+        role,
+        content: [{ type: "text", text }],
+        timestamp,
+        ...(index === 2
+          ? {
+              display: false,
+              excludeFromContext: true,
+              provenance: { kind: "internal_system", sourceTool: "openclaw_agent_consult" },
+              idempotencyKey: "upgrade-talk-consult:user",
+            }
+          : {}),
+        ...(index === 3 ? { provenance: { kind: "realtime_voice", sourceChannel: "talk" } } : {}),
+        ...(index === 4 ? { __openclaw: { runId: "upgrade-talk-consult" } } : {}),
+      },
+    };
+  });
+}
+
 function writeMigratedSessionState(stateDir: string): undefined {
   const agentSessionsDir = join(stateDir, "agents", "main", "sessions");
   const agentDbDir = join(stateDir, "agents", "main", "agent");
@@ -524,6 +558,7 @@ function writeMigratedSessionState(stateDir: string): undefined {
     const migratedSessions = [
       {
         entry: {
+          label: "upgrade-mixed-talk",
           skillsSnapshot: {
             prompt: "legacy prompt survives as metadata",
           },
@@ -545,12 +580,13 @@ function writeMigratedSessionState(stateDir: string): undefined {
     for (const { entry, sessionId, sessionKey } of migratedSessions) {
       insertSession.run(sessionId, sessionKey, 1710000000000, 1710000000000);
       insertEntry.run(sessionKey, sessionId, JSON.stringify(entry), 1710000000000);
-      insertTranscript.run(
-        sessionId,
-        1,
-        JSON.stringify({ type: "session", id: sessionId }),
-        1710000000000,
-      );
+      const transcript = [
+        { type: "session", id: sessionId },
+        ...(sessionId === "upgrade-main-session" ? mixedTalkTranscriptEntries() : []),
+      ];
+      transcript.forEach((event, index) => {
+        insertTranscript.run(sessionId, index + 1, JSON.stringify(event), 1710000000000);
+      });
     }
   } finally {
     db.close();
@@ -560,7 +596,10 @@ function writeMigratedSessionState(stateDir: string): undefined {
 function createMigratedSessionFileStore(
   options: { includePrompt?: boolean } = {},
 ): Record<string, Record<string, unknown>> {
-  const main: Record<string, unknown> = { sessionId: "upgrade-main-session" };
+  const main: Record<string, unknown> = {
+    sessionId: "upgrade-main-session",
+    label: "upgrade-mixed-talk",
+  };
   if (options.includePrompt !== false) {
     main.skillsSnapshot = {
       prompt: "legacy prompt survives as metadata",
@@ -587,7 +626,12 @@ function writeMigratedSessionFiles(
   ]) {
     writeFileSync(
       join(agentSessionsDir, `${sessionId}.jsonl`),
-      `${JSON.stringify({ type: "session", id: sessionId })}\n`,
+      [
+        { type: "session", id: sessionId },
+        ...(sessionId === "upgrade-main-session" ? mixedTalkTranscriptEntries() : []),
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n") + "\n",
     );
   }
 }
@@ -1524,7 +1568,14 @@ process.stdout.write(sessionDir + "\\n");
         assert(row);
         const transcriptPath = join(sessionsDir, `${String(row.sessionId)}.jsonl`);
         expect(row.sessionFile).toBe(transcriptPath);
-        expect(JSON.parse(readFileSync(transcriptPath, "utf8")).id).toBe(row.sessionId);
+        const entries = readFileSync(transcriptPath, "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => JSON.parse(line));
+        expect(entries[0].id).toBe(row.sessionId);
+        if (row.sessionId === "upgrade-main-session") {
+          expect(entries.slice(1)).toEqual(mixedTalkTranscriptEntries());
+        }
       }
 
       const timestamps = seededRows.map((row) => row?.updatedAt);
@@ -1894,6 +1945,57 @@ process.stdout.write(sessionDir + "\\n");
     expect(verify).not.toThrow();
   });
 
+  it.each(["missing-speech", "changed-legacy-exclusion", "missing-label"])(
+    "rejects changed mixed Talk upgrade state (%s)",
+    (mutation) => {
+      expect(() =>
+        runSessionStateAssertion((stateDir) => {
+          writeMigratedSessionState(stateDir);
+          const db = new DatabaseSync(
+            join(stateDir, "agents", "main", "agent", "openclaw-agent.sqlite"),
+          );
+          try {
+            if (mutation === "missing-label") {
+              const row = db
+                .prepare("SELECT entry_json FROM session_nodes WHERE session_key = ?")
+                .get("agent:main:main");
+              assert(row && typeof row.entry_json === "string");
+              const entry = JSON.parse(row.entry_json);
+              delete entry.label;
+              db.prepare("UPDATE session_nodes SET entry_json = ? WHERE session_key = ?").run(
+                JSON.stringify(entry),
+                "agent:main:main",
+              );
+            } else if (mutation === "missing-speech") {
+              db.prepare("DELETE FROM transcript_events WHERE session_id = ? AND seq = ?").run(
+                "upgrade-main-session",
+                5,
+              );
+            } else {
+              const row = db
+                .prepare(
+                  "SELECT event_json FROM transcript_events WHERE session_id = ? AND seq = ?",
+                )
+                .get("upgrade-main-session", 4);
+              assert(row && typeof row.event_json === "string");
+              const event = JSON.parse(row.event_json);
+              delete event.message.excludeFromContext;
+              db.prepare(
+                "UPDATE transcript_events SET event_json = ? WHERE session_id = ? AND seq = ?",
+              ).run(JSON.stringify(event), "upgrade-main-session", 4);
+            }
+          } finally {
+            db.close();
+          }
+        }),
+      ).toThrow(
+        mutation === "missing-label"
+          ? /update lost the mixed Talk session label/
+          : /update changed mixed chat\/Talk transcript/,
+      );
+    },
+  );
+
   it.each([false, true])("preserves frozen inline ACP metadata (shared database: %s)", (shared) => {
     runSessionStateAssertion(
       (stateDir) => {
@@ -2082,6 +2184,7 @@ process.stdout.write(JSON.stringify(result));
         try {
           db.prepare("UPDATE session_nodes SET entry_json = ? WHERE session_key = ?").run(
             JSON.stringify({
+              label: "upgrade-mixed-talk",
               skillsSnapshot: {
                 prompt: "Current runtime skill instructions",
                 skills: [{ name: "survivor-skill" }],

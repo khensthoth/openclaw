@@ -51,6 +51,40 @@ const PERSONA_FILES = new Map([
 const LEGACY_SESSION_MAIN_ID = "upgrade-main-session";
 const LEGACY_SESSION_DIRECT_ID = "upgrade-direct-session";
 const LEGACY_SESSION_GROUP_ID = "upgrade-group-session";
+// Shipped Talk rows must survive an update without losing speech or changing legacy exclusions.
+const LEGACY_MIXED_TALK_MESSAGES = [
+  {
+    role: "user",
+    content: [{ type: "text", text: "UPGRADE_CHAT: Check my calendar." }],
+    timestamp: 1710000000000,
+  },
+  {
+    role: "assistant",
+    content: [{ type: "text", text: "UPGRADE_CHAT_REPLY: I will check." }],
+    timestamp: 1710000001000,
+  },
+  {
+    role: "user",
+    content: [{ type: "text", text: "UPGRADE_INTERNAL: Consult about the calendar." }],
+    timestamp: 1710000002000,
+    display: false,
+    excludeFromContext: true,
+    provenance: { kind: "internal_system", sourceTool: "openclaw_agent_consult" },
+    idempotencyKey: "upgrade-talk-consult:user",
+  },
+  {
+    role: "user",
+    content: [{ type: "text", text: "UPGRADE_SPEECH: Also tomorrow; silver mango." }],
+    timestamp: 1710000003000,
+    provenance: { kind: "realtime_voice", sourceChannel: "talk" },
+  },
+  {
+    role: "assistant",
+    content: [{ type: "text", text: "UPGRADE_CONSULT_REPLY: Both days checked." }],
+    timestamp: 1710000004000,
+    __openclaw: { runId: "upgrade-talk-consult" },
+  },
+];
 const LEGACY_ACP_META = {
   backend: "acpx",
   agent: "codex",
@@ -146,6 +180,7 @@ function seedLegacySessionMetadata(stateDir) {
   const sessions = {
     "agent:main:main": {
       ...entry(LEGACY_SESSION_MAIN_ID, 0),
+      ...(getScenario() === "base" ? { label: "upgrade-mixed-talk" } : {}),
       skillsSnapshot: {
         prompt: "legacy prompt survives as metadata",
         resolvedSkills: [
@@ -166,7 +201,22 @@ function seedLegacySessionMetadata(stateDir) {
   };
   writeJson(path.join(legacySessionsDir, "sessions.json"), sessions);
   for (const { sessionId, sessionFile } of Object.values(sessions)) {
-    write(sessionFile, `${JSON.stringify({ type: "session", id: sessionId })}\n`);
+    const messages =
+      getScenario() === "base" && sessionId === LEGACY_SESSION_MAIN_ID
+        ? LEGACY_MIXED_TALK_MESSAGES.map((message, index) => ({
+            type: "message",
+            id: `upgrade-mixed-${index}`,
+            parentId: index === 0 ? null : `upgrade-mixed-${index - 1}`,
+            timestamp: new Date(message.timestamp).toISOString(),
+            message,
+          }))
+        : [];
+    write(
+      sessionFile,
+      [{ type: "session", id: sessionId }, ...messages]
+        .map((entry) => JSON.stringify(entry))
+        .join("\n") + "\n",
+    );
   }
 }
 
@@ -1208,6 +1258,42 @@ function assertSessionMetadataMigrated(stateDir, stage) {
       );
     }
   }
+  if (getScenario() === "base") {
+    assertStrict.equal(
+      main.label,
+      "upgrade-mixed-talk",
+      "update lost the mixed Talk session label",
+    );
+    const messages =
+      source === "file"
+        ? fs
+            .readFileSync(path.join(agentSessionsDir, `${LEGACY_SESSION_MAIN_ID}.jsonl`), "utf8")
+            .trim()
+            .split("\n")
+            .map((line) => JSON.parse(line))
+            .filter((entry) => entry.type === "message")
+            .map((entry) => entry.message)
+        : readDatabase(
+            path.join(stateDir, "agents", "main", "agent", "openclaw-agent.sqlite"),
+            (db) =>
+              db
+                .prepare(
+                  `SELECT ${sqliteTranscriptPayloadColumns(db)} FROM transcript_events WHERE session_id = ? ORDER BY seq`,
+                )
+                .all(LEGACY_SESSION_MAIN_ID)
+                .map((event) => JSON.parse(readSqliteTranscriptPayload(event)))
+                .filter((entry) => entry.type === "message")
+                .map((entry) => entry.message),
+          );
+    assertStrict.deepEqual(
+      messages.slice(0, LEGACY_MIXED_TALK_MESSAGES.length),
+      LEGACY_MIXED_TALK_MESSAGES,
+      "update changed mixed chat/Talk transcript order, speech, or legacy exclusion metadata",
+    );
+    console.log(
+      `Mixed chat/Talk transcript retained through ${stage}; legacy exclusion unchanged.`,
+    );
+  }
   // Migration preserves the legacy prompt. A completed serving turn rebuilds
   // that cache; durable session identity and history must survive both stages.
   if (stage === "post-inference") {
@@ -1678,6 +1764,61 @@ function assertStatusJson([file]) {
   assert(status && typeof status === "object", "gateway status JSON was not an object");
   const text = JSON.stringify(status);
   assert(/running|connected|ok|ready/u.test(text), "gateway status did not report a healthy state");
+  // Baseline status runs before seeding; inspect history only at the post-upgrade status hook.
+  if (getScenario() === "base" && path.basename(file) === "status.json") {
+    const result = spawnSync(
+      "openclaw",
+      [
+        "gateway",
+        "call",
+        "chat.history",
+        "--url",
+        "ws://127.0.0.1:18789",
+        "--token",
+        requireEnv("GATEWAY_AUTH_TOKEN_REF"),
+        "--timeout",
+        "30000",
+        "--json",
+        "--params",
+        JSON.stringify({ sessionKey: "agent:main:main", limit: 100 }),
+      ],
+      { timeout: 35_000, maxBuffer: 2 * 1024 * 1024, encoding: "utf8" },
+    );
+    // Child-process errors include credential-bearing argv; keep them out of proof output.
+    assert(!result.error && result.status === 0, "mixed Talk upgrade history RPC failed");
+    const history = JSON.parse(result.stdout);
+    assertStrict.equal(history.sessionId, LEGACY_SESSION_MAIN_ID);
+    const visible = JSON.stringify(history.messages);
+    assert(
+      !visible.includes("UPGRADE_INTERNAL:"),
+      "legacy generated consult input leaked into history",
+    );
+    const expected = [
+      "UPGRADE_CHAT: Check my calendar.",
+      "UPGRADE_CHAT_REPLY: I will check.",
+      "UPGRADE_SPEECH: Also tomorrow; silver mango.",
+    ];
+    const actual = history.messages.flatMap((message) => {
+      const contents =
+        typeof message.content === "string"
+          ? [message.content]
+          : (message.content ?? []).filter((part) => part.type === "text").map((part) => part.text);
+      return contents.filter((value) => expected.includes(value));
+    });
+    assertStrict.deepEqual(
+      actual,
+      expected,
+      "upgraded visible history lost or reordered chat/Talk speech",
+    );
+    const artifactRoot = process.env.OPENCLAW_UPGRADE_SURVIVOR_ARTIFACT_ROOT || path.dirname(file);
+    writeJson(path.join(artifactRoot, "mixed-talk-upgrade-history.json"), {
+      status: "passed",
+      sessionId: history.sessionId,
+      visibleMessages: actual,
+      legacyGeneratedInputHidden: true,
+      modelCalled: false,
+    });
+  }
 }
 
 function assertRecoverableUpdateJson([file, expectedVersion, , baselineVersion]) {

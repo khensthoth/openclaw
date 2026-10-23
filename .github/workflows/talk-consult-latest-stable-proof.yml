@@ -1,0 +1,67 @@
+name: Talk consult latest stable upgrade proof
+
+on:
+  push:
+    branches: [proof/talk-consult-final-2026-10-23]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: talk-consult-latest-stable-proof-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  stable-upgrade:
+    if: github.repository == 'khensthoth/openclaw'
+    name: Stable 2026.10.6 mixed Talk/chat upgrade
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CI: "true"
+      OPENCLAW_DOCKER_E2E_SELECTED_SHA: ${{ github.sha }}
+      OPENCLAW_UPGRADE_SURVIVOR_DOCKER_RUN_TIMEOUT: "3600s"
+      OPENCLAW_UPGRADE_SURVIVOR_PUBLISHED_BASELINE: "1"
+      OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC: openclaw@2026.10.6
+      OPENCLAW_UPGRADE_SURVIVOR_SCENARIO: base
+      OPENCLAW_UPGRADE_SURVIVOR_LIVE_MODELS: ""
+      OPENCLAW_UPGRADE_SURVIVOR_LIVE_OPENAI: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-env
+        with:
+          node-version: "24.22.1"
+          cache-mode: off
+          install-bun: "true"
+          install-deps: "true"
+      - name: Check fork-only proof workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm check:workflows
+          pnpm exec oxfmt --check .github/workflows/talk-consult-latest-stable-proof.yml scripts/e2e/lib/upgrade-survivor/assertions.mjs test/scripts/upgrade-survivor-assertions.test.ts test/scripts/upgrade-survivor-baseline-order.test.ts
+          mkdir -p .artifacts/talk-review
+          pnpm test test/scripts/upgrade-survivor-assertions.test.ts test/scripts/upgrade-survivor-baseline-order.test.ts --maxWorkers=1 --reporter=verbose 2>&1 | tee .artifacts/talk-review/upgrade-fixtures.log
+      - name: Run native published stable-to-candidate survivor lane
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/talk-review
+          git rev-parse HEAD > .artifacts/talk-review/candidate-source-sha.txt
+          pnpm test:docker:upgrade-survivor 2>&1 | tee .artifacts/talk-review/stable-upgrade.log
+      - name: Upload synthetic upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: talk-stable-upgrade
+          path: |
+            .artifacts/talk-review/
+            .artifacts/upgrade-survivor/**/summary.json
+            .artifacts/upgrade-survivor/**/mixed-talk-upgrade-history.json
+            .artifacts/upgrade-survivor/**/candidate-package-identity.json
+            .artifacts/upgrade-survivor/**/installed-package-identity.json
+          retention-days: 14

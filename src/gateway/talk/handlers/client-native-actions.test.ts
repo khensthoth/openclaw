@@ -55,6 +55,7 @@ import {
   nativeDelegation,
   nativeResult,
   requireString,
+  settleNativeBackend,
   talkEventTypes,
   upstream,
   withParkedNativeTask,
@@ -244,7 +245,7 @@ describe("native Talk action ownership through public plugin registration", () =
           }),
       );
       try {
-        const { socket, result } = await connectNativeSession(fixture);
+        let { socket, result } = await connectNativeSession(fixture);
         activeVoiceSessionId = requireString(result, "voiceSessionId");
         await flushNativeTranscript(result, () => socket.serverEvent(nativeTranscript(spoken)));
         await Promise.all(publications);
@@ -291,9 +292,39 @@ describe("native Talk action ownership through public plugin registration", () =
         );
         expect(spokenFrames).toEqual([spoken]);
         expect(JSON.stringify(fixture.broadcast.mock.calls)).not.toContain(delegated);
-        finish();
+        // Replace only the transport while the first model response is still held.
+        const originalSocket = socket;
+        const replacement = await connectNativeSession(fixture, true, activeVoiceSessionId);
+        expect(replacement.result.voiceSessionId).toBe(result.voiceSessionId);
+        await vi.waitFor(() =>
+          expect(originalSocket.readyState).toBe(upstream.NativeSocket.CLOSED),
+        );
+        const pendingSession = await nativeCallSession();
+        expect(
+          pendingSession.instructions,
+          "pending native reconnect background hides generated consult input",
+        ).not.toContain(delegated);
+        expect(
+          nativeBackgroundItems(pendingSession),
+          "pending native reconnect background preserves only speech",
+        ).toEqual([{ role: "user", text: spoken }]);
+        expect(run.abortSignal?.aborted).toBe(false);
+        expect(streamMocks.streamSimple).toHaveBeenCalledOnce();
+        expect(spokenMessages(replacement.socket.sent)).toEqual([]);
+        ({ socket, result } = replacement);
+        await settleNativeBackend(finish);
         await modelRun;
-        await vi.waitFor(() => expect(spokenMessages(socket.sent)).toContain(answerText));
+        await upstream.runEmbeddedAgent.mock.results[0]!.value;
+        expect(run.abortSignal?.aborted).toBe(false);
+        expect(upstream.runEmbeddedAgent).toHaveBeenCalledOnce();
+        // Replacing the transport revokes its requester-final binding, not the retained task.
+        // The shared answer persists; the new socket cannot inherit a stale delegation result.
+        expect(
+          projectChatDisplayMessages(await readHistory("native pending reconnect completion")).map(
+            extractText,
+          ),
+        ).toEqual([spoken, answerText]);
+        expect(spokenMessages(socket.sent)).toEqual([]);
         // Speech stays a distinct raw record; the UI discloses it without claiming replacement.
         const readback = answerText;
         const dialogue = "OpenClaw is waiting on the model.";

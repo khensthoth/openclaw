@@ -1,0 +1,38 @@
+name: Talk consult v2 proof
+
+on:
+  push:
+    branches: [proof/talk-consult-v2-2026-11-15]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    if: github.repository == 'khensthoth/openclaw'
+    name: Chat-backed consult retention
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-env
+        with:
+          node-version: "24.22.1"
+          cache-mode: off
+          install-bun: "true"
+          install-deps: "true"
+      - name: Format, lint and focused tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="src/gateway/talk/handlers/client.ts src/gateway/talk/handlers/index.test.ts src/gateway/server.talk-consult-history.test.ts docs/nodes/talk/realtime-sessions.md"
+          git diff --check HEAD~2 -- $files
+          pnpm exec oxfmt --check $files
+          pnpm exec oxlint src/gateway/talk/handlers/client.ts src/gateway/talk/handlers/index.test.ts src/gateway/server.talk-consult-history.test.ts
+          pnpm test src/gateway/talk/handlers/index.test.ts src/gateway/server.talk-consult-history.test.ts src/gateway/talk/handlers/client-native-actions.test.ts src/gateway/talk/handlers/client-native-control.test.ts src/gateway/talk/relay/relay-consult-adoption.regression.test.ts --maxWorkers=1 --reporter=verbose

@@ -1,0 +1,14 @@
+{
+  "tools": {
+    "media": {
+      "models": [
+        {
+          "provider": "google",
+          "model": "gemini-4-neon",
+          "capabilities": ["audio"],
+          "providerOptions": { "google": { "thinkingLevel": "low" } }
+        }
+      ]
+    }
+  }
+}

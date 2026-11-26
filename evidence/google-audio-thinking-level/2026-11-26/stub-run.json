@@ -1,0 +1,46 @@
+{
+  "gemini_requests": [
+    {
+      "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-4-neon:generateContent",
+      "requestBody": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Transcribe the audio."
+              },
+              {
+                "inline_data": {
+                  "mime_type": "audio/wav",
+                  "data": "<490514 audio bytes>"
+                }
+              }
+            ]
+          }
+        ],
+        "generationConfig": {
+          "thinkingConfig": {
+            "thinkingLevel": "low"
+          }
+        }
+      },
+      "status": "stubbed (no network call)"
+    }
+  ],
+  "cli_output": {
+    "ok": true,
+    "capability": "audio.transcribe",
+    "transport": "local",
+    "provider": "google",
+    "model": "gemini-4-neon",
+    "attempts": [],
+    "outputs": [
+      {
+        "path": "order-note.wav",
+        "text": "stub transcript",
+        "kind": "audio.transcription"
+      }
+    ]
+  }
+}

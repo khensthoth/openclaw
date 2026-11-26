@@ -1,0 +1,72 @@
+{
+  "gemini_requests": [
+    {
+      "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-4-neon:generateContent",
+      "requestBody": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Transcribe the audio."
+              },
+              {
+                "inline_data": {
+                  "mime_type": "audio/wav",
+                  "data": "<490514 audio bytes>"
+                }
+              }
+            ]
+          }
+        ],
+        "generationConfig": {
+          "thinkingConfig": {
+            "thinkingLevel": "low"
+          }
+        }
+      },
+      "status": 200,
+      "latencyMs": 37484,
+      "modelVersion": "gemini-4-neon",
+      "usageMetadata": {
+        "promptTokenCount": 402,
+        "candidatesTokenCount": 33,
+        "totalTokenCount": 610,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 62
+          },
+          {
+            "modality": "AUDIO",
+            "tokenCount": 340
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 33
+          }
+        ],
+        "thoughtsTokenCount": 175,
+        "serviceTier": "standard"
+      },
+      "text": "Hello, this is a test voice note. Please send two boxes of red dates and one bag of goji berries to the shop on Monday. Thank you."
+    }
+  ],
+  "cli_output": {
+    "ok": true,
+    "capability": "audio.transcribe",
+    "transport": "local",
+    "provider": "google",
+    "model": "gemini-4-neon",
+    "attempts": [],
+    "outputs": [
+      {
+        "path": "order-note.wav",
+        "text": "Hello, this is a test voice note. Please send two boxes of red dates and one bag of goji berries to the shop on Monday. Thank you.",
+        "kind": "audio.transcription"
+      }
+    ]
+  }
+}
